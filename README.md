@@ -1,4 +1,4 @@
-In order to make the RadiomicsToolbox run, you have to follow the following steps:
+In order to make the RaCaT run from source, follow the following steps:
 
 1. Clone Radiomics repository
 
@@ -38,26 +38,47 @@ Download the files of this repository.
 5. Use CMakeList to configure, generate and compile Radiomics.exe
    In order to run the radiomics code with the libraries, the following CMakeLists.txt file is required:
    The /PATH/TO elements have to be replaced by the corresponding paths on your computer.
+   
     cmake_minimum_required(VERSION 2.8)
+    
     project(Radiomics)
+    
     SET (BOOST_ROOT /PATH/TO/BOOST)
+    
     SET (BOOST_LIBRARYDIR "/PATH/TO/BOOST/stage/lib")
+    
     SET (BOOST_MIN_VERSION "1.55.0")
+    
     set (Boost_NO_BOOST_CMAKE ON)
+    
     FIND_PACKAGE(Boost ${BOOST_MIN_VERSION} REQUIRED)
+    
     if (NOT Boost_FOUND)
+    
       message(FATAL_ERROR "Fatal error: Boost (version >= 1.55) required.")
+    
     else()
+     
      message(STATUS "Setting up BOOST")
+     
      message(STATUS " Library  - ${Boost_LIBRARY_DIRS}")
+     
      include_directories(${Boost_INCLUDE_DIRS})
+     
      link_directories(${Boost_LIBRARY_DIRS})
+    
     endif (NOT Boost_FOUND)
+    
     find_package(ITK REQUIRED)
+    
     include(${ITK_USE_FILE})
+    
     add_executable(Radiomics MACOSX_BUNDLE /PATH/TO/radiomics-master/main.cpp)
+    
     target_link_libraries(Radiomics
+    
     ${Boost_LIBRARIES} ${Glue}  ${VTK_LIBRARIES} ${ITK_LIBRARIES})
+
 
    Open the CMAKE GUI.
 
