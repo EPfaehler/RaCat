@@ -1,3 +1,5 @@
+A detailed documentation about how to use RaCaT and how to run it from source can be found in the documentation folder. However, here a short overview:
+
 In order to make the RaCaT run from source, follow the following steps:
 
 1. Clone Radiomics repository
