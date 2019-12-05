@@ -18,12 +18,12 @@ class GLCMFeatures2DMRG : GLCMFeatures<T,R>  {
      private:
 
         string normGLCM;
-        vector<double> actualSpacing;
+        vector<float> actualSpacing;
         GLCMFeatures<T, R> glcmComb;
 
         void extractGLCMDataMRG(vector<T> &glcmData, GLCMFeatures2DMRG<T, R> glcmFeatures);
-        void fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int depth, int angle);
-        boost::multi_array<double, 2> calculateMatrix2DMRG( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity);
+        void fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int depth, int angle);
+        boost::multi_array<float, 2> calculateMatrix2DMRG( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity);
 
         vector<T> diagonalProbabilities;
         vector<T> crossProbabilities;
@@ -39,9 +39,9 @@ class GLCMFeatures2DMRG : GLCMFeatures<T,R>  {
 		}
 		~GLCMFeatures2DMRG() {
 		}
-        void calculateAllGLCMFeatures2DMRG(GLCMFeatures2DMRG<T,R> &glcmFeat, boost::multi_array<T,R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config);
+        void calculateAllGLCMFeatures2DMRG(GLCMFeatures2DMRG<T,R> &glcmFeat, boost::multi_array<T,R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config);
         void writeCSVFileGLCM2DMRG(GLCMFeatures2DMRG<T,R> glcmFeat, string outputFolder);
-		void writeOneFileGLCM2DMRG(GLCMFeatures2DMRG<T, R> glcmFeat, string outputFolder);
+		void writeOneFileGLCM2DMRG(GLCMFeatures2DMRG<T, R> glcmFeat, ConfigFile config, int &parameterSpaceNr);
 };
 
 
@@ -53,8 +53,8 @@ for the occurence of every neighbor pair.
 @param[out]: GLCM-matrix
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLCMFeatures2DMRG<T,R>::calculateMatrix2DMRG( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity){
-    typedef boost::multi_array<double, 2> glcmat;
+boost::multi_array<float, 2> GLCMFeatures2DMRG<T,R>::calculateMatrix2DMRG( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity){
+    typedef boost::multi_array<float, 2> glcmat;
     int sizeMatrix = maxIntensity;
     int ang;
     glcmat sum(boost::extents[sizeMatrix][sizeMatrix]);
@@ -69,7 +69,7 @@ boost::multi_array<double, 2> GLCMFeatures2DMRG<T,R>::calculateMatrix2DMRG( boos
     }
 
     //calculate the sum of all matrix elements (= the number of neighbor-pairs in the matrix
-    double sumMatrElement = accumulate(sum.origin(), sum.origin() + sum.num_elements(), 0);
+	float sumMatrElement = accumulate(sum.origin(), sum.origin() + sum.num_elements(), 0);
     //divide the whole matrix by the sum to obtain matrix elements representing the probabilities
     //of the occurence of a neighbor pair
 	if (sumMatrElement != 0) {
@@ -95,7 +95,7 @@ As next step, the GLCMatrix is filled: for every neighborpair the position in th
 the value on this position of the GLCMatrix is increased +1
 */
 template <class T, size_t R>
-void GLCMFeatures2DMRG<T, R>::fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int depth, int angle){
+void GLCMFeatures2DMRG<T, R>::fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int depth, int angle){
     //vector in which all neihbor pairs are stored
     std::vector<std::pair<T, T> > neighbours;
     float weight;
@@ -121,7 +121,7 @@ void GLCMFeatures2DMRG<T, R>::fill2DMatrices(boost::multi_array<T, R> inputMatri
 
 
 template <class T, size_t R>
-void GLCMFeatures2DMRG<T, R>::calculateAllGLCMFeatures2DMRG(GLCMFeatures2DMRG<T,R> &glcmFeatures, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config){
+void GLCMFeatures2DMRG<T, R>::calculateAllGLCMFeatures2DMRG(GLCMFeatures2DMRG<T,R> &glcmFeatures, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config){
 
     //get which norm should be used in the calculation of the GLCM features
     normGLCM = config.normGLCM;
@@ -156,7 +156,7 @@ void GLCMFeatures2DMRG<T, R>::calculateAllGLCMFeatures2DMRG(GLCMFeatures2DMRG<T,
 
 
     for(int depth = 0; depth < totalDepth; depth++){
-          boost::multi_array<double,2> GLCM180= glcmFeatures.calculateMatrix2DMRG(inputMatrix, depth, maxIntensity);
+          boost::multi_array<float,2> GLCM180= glcmFeatures.calculateMatrix2DMRG(inputMatrix, depth, maxIntensity);
           glcmFeatures.calculateJointMaximum(GLCM180);
           sumJointMaximum += this->jointMaximum;
           glcmFeatures.calculateJointAverage(GLCM180);
@@ -262,8 +262,14 @@ void GLCMFeatures2DMRG<T, R>::writeCSVFileGLCM2DMRG(GLCMFeatures2DMRG<T,R> glcmF
 }
 
 template <class T, size_t R>
-void GLCMFeatures2DMRG<T, R>::writeOneFileGLCM2DMRG(GLCMFeatures2DMRG<T, R> glcmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLCMFeatures2DMRG<T, R>::writeOneFileGLCM2DMRG(GLCMFeatures2DMRG<T, R> glcmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -271,14 +277,38 @@ void GLCMFeatures2DMRG<T, R>::writeOneFileGLCM2DMRG(GLCMFeatures2DMRG<T, R> glcm
 	ofstream glcmCSV;
 	glcmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	glcmComb.defineGLCMFeatures(features);
 
 	vector<T> glcmData;
 	extractGLCMDataMRG(glcmData, glcmFeat);
-	for (int i = 0; i< glcmData.size(); i++) {
-		glcmCSV << "glcmFeatures2Dmrg"<<","<< features[i] << ",";
-		glcmCSV << glcmData[i];
-		glcmCSV << "\n";
+	if (config.csvOutput == 1) {
+		glcmComb.defineGLCMFeatures(features);
+		for (int i = 0; i < glcmData.size(); i++) {
+			glcmCSV << "glcmFeatures2Dmrg" << "," << features[i] << ",";
+			glcmCSV << glcmData[i];
+			glcmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glcmComb.defineGLCMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "2DMRG" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glcmData.size(); i++) {
+			glcmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glcmCSV << glcmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glcmCSV << "\n";
+		}
+
 	}
 	glcmCSV.close();
 }

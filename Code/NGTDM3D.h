@@ -23,19 +23,19 @@ class NGTDMFeatures3D : NGTDMFeatures2DMRG<T, R> {
 private:
 	NGTDMFeatures2DMRG<T, R> ngtdm;
 	//these are the values in case we want to calculate novel/uncommon features
-	vector<double> actualSpacing;
+	vector<float> actualSpacing;
 	string normNGTDM;
 	//distance defined by the user
 	int dist;
 
 	void extractNGTDMData3D(vector<T> &ngtdmData, NGTDMFeatures3D<T, R> ngtdmFeatures);
-	boost::multi_array<double, 2> getNGTDMatrix3D(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumMatrix);
+	boost::multi_array<float, 2> getNGTDMatrix3D(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumMatrix);
 
 public:
-	void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix);
-	void calculateAllNGTDMFeatures3D(NGTDMFeatures3D<T, R> &ngtdm, boost::multi_array<T, R> sumMatrix, Image<T, R> imageAttr, vector<double> spacing, ConfigFile config);
+	void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix);
+	void calculateAllNGTDMFeatures3D(NGTDMFeatures3D<T, R> &ngtdm, boost::multi_array<T, R> sumMatrix, Image<T, R> imageAttr, vector<float> spacing, ConfigFile config);
 	void writeCSVFileNGTDM3D(NGTDMFeatures3D<T, R> ngtdmFeatures, string outputFolder);
-	void writeOneFileNGTDM3D(NGTDMFeatures3D<T, R> ngtdmFeatures, string outputFolder);
+	void writeOneFileNGTDM3D(NGTDMFeatures3D<T, R> ngtdmFeatures, ConfigFile config, int &parameterSpaceNr);
 
 
 };
@@ -50,8 +50,8 @@ In this function the NGTDM is filled for the 3D case.
 
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> NGTDMFeatures3D<T, R>::getNGTDMatrix3D(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumMatrix) {
-	typedef boost::multi_array<double, 2>  ngtdmat;
+boost::multi_array<float, 2> NGTDMFeatures3D<T, R>::getNGTDMatrix3D(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumMatrix) {
+	typedef boost::multi_array<float, 2>  ngtdmat;
 	int sizeMatrix = this->diffGreyLevels.size();
 	ngtdmat NGTDMatrix(boost::extents[sizeMatrix][3]);
 	std::vector<T> elementsOfWholeNeighborhoods;
@@ -98,7 +98,7 @@ In this function the second row is filled with the probability.
 
 */
 template <class T, size_t R>
-void NGTDMFeatures3D<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix) {
+void NGTDMFeatures3D<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix) {
 	int numItem = 0;
 	for (int actElementIndex = 0; actElementIndex<this->diffGreyLevels.size(); actElementIndex++) {
 		numItem += ngtdMatrix[actElementIndex][0];
@@ -110,12 +110,12 @@ void NGTDMFeatures3D<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood
 
 
 template <class T, size_t R>
-void NGTDMFeatures3D<T, R>::calculateAllNGTDMFeatures3D(NGTDMFeatures3D<T, R> &ngtdm, boost::multi_array<T, R> sumMatrix, Image<T, R> imageAttr, vector<double> spacing, ConfigFile config) {
+void NGTDMFeatures3D<T, R>::calculateAllNGTDMFeatures3D(NGTDMFeatures3D<T, R> &ngtdm, boost::multi_array<T, R> sumMatrix, Image<T, R> imageAttr, vector<float> spacing, ConfigFile config) {
 	this->diffGreyLevels = imageAttr.diffGreyLevels;
 	actualSpacing = spacing;
 	normNGTDM = config.normNGTDM;
 	dist = config.dist;
-	boost::multi_array<double, 2> ngtdMatrix = getNGTDMatrix3D(imageAttr.imageMatrix, sumMatrix);
+	boost::multi_array<float, 2> ngtdMatrix = getNGTDMatrix3D(imageAttr.imageMatrix, sumMatrix);
 
 	ngtdm.calculateCoarseness(ngtdMatrix);
 	ngtdm.calculateContrast(ngtdMatrix);
@@ -149,8 +149,14 @@ void NGTDMFeatures3D<T, R>::writeCSVFileNGTDM3D(NGTDMFeatures3D<T, R> ngtdmFeatu
 
 
 template <class T, size_t R>
-void NGTDMFeatures3D<T, R>::writeOneFileNGTDM3D(NGTDMFeatures3D<T, R> ngtdmFeatures, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void NGTDMFeatures3D<T, R>::writeOneFileNGTDM3D(NGTDMFeatures3D<T, R> ngtdmFeatures, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -158,14 +164,39 @@ void NGTDMFeatures3D<T, R>::writeOneFileNGTDM3D(NGTDMFeatures3D<T, R> ngtdmFeatu
 	ofstream ngtdmCSV;
 	ngtdmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	ngtdm.defineNGTDMFeatures2DMRG(features);
+	
 
 	vector<T> ngtdmData;
 	extractNGTDMData3D(ngtdmData, ngtdmFeatures);
-	for (int i = 0; i< ngtdmData.size(); i++) {
-		ngtdmCSV << "ngtdmFeatures3D" << "," << features[i] << ",";
-		ngtdmCSV << ngtdmData[i];
-		ngtdmCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		ngtdm.defineNGTDMFeatures2DMRG(features);
+		for (int i = 0; i < ngtdmData.size(); i++) {
+			ngtdmCSV << "ngtdmFeatures3D" << "," << features[i] << ",";
+			ngtdmCSV << ngtdmData[i];
+			ngtdmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		ngtdm.defineNGTDMFeatures2DMRGOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "3Dmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < ngtdmData.size(); i++) {
+			ngtdmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			ngtdmCSV << ngtdmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			ngtdmCSV << "\n";
+		}
+
 	}
 	ngtdmCSV.close();
 }

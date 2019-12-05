@@ -22,19 +22,20 @@ class GLDZMFeatures2D : public GLSZMFeatures2DMRG<T,R>{
 		vector<T> sumProbCols;
 
 		int totalNrZones;
-		vector<double> rowSums;
-		vector<double> colSums;
+		vector<float> rowSums;
+		vector<float> colSums;
 		
 		GLSZMFeatures2DMRG<T, R> GLSZM2D;
         void extractGLDZMData(vector<T> &gldzmData, GLDZMFeatures2D<T, R> gldzmFeatures);
-        boost::multi_array<double, 2> fillMatrix(boost::multi_array<T,R> inputMatrix, boost::multi_array<T, R> distanceMap, boost::multi_array<double, 2>  &gldzmat);
-        boost::multi_array<double, 2> getMatrix( boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> distanceMap);
+        boost::multi_array<float, 2> fillMatrix(boost::multi_array<T,R> inputMatrix, boost::multi_array<T, R> distanceMap, boost::multi_array<float, 2>  &gldzmat);
+        boost::multi_array<float, 2> getMatrix( boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> distanceMap);
 
      public:
 		void defineGLDZMFeatures(vector<string> &features);
+		void defineGLDZMFeaturesOntology(vector<string> &features);
         int getMinimalDistance(boost::multi_array<T,R> distanceMap, vector<vector<int> > matrixIndices);
         void writeCSVFileGLDZM(GLDZMFeatures2D<T,R> gldzmFeat, string outputFolder);
-		void writeOneFileGLDZM(GLDZMFeatures2D<T, R> gldzmFeat, string outputFolder);
+		void writeOneFileGLDZM(GLDZMFeatures2D<T, R> gldzmFeat, ConfigFile config, int &parameterSpaceNr);
 		void calculateAllGLDZMFeatures2D(GLDZMFeatures2D<T,R> &gldzmFeat, boost::multi_array<T, R> distanceMap, Image<T, R> imageAttr, ConfigFile config);
 };
 
@@ -49,7 +50,7 @@ The GLDZM matrix is given as reference and filled in the function
 @param[in]: boost::multi_array<T, 3> GLDZM: GLDZM matrix 
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLDZMFeatures2D<T, R>::fillMatrix(boost::multi_array<T,R> inputMatrix, boost::multi_array<T, R> distanceMap, boost::multi_array<double, 2>  &gldzmat){
+boost::multi_array<float, 2> GLDZMFeatures2D<T, R>::fillMatrix(boost::multi_array<T,R> inputMatrix, boost::multi_array<T, R> distanceMap, boost::multi_array<float, 2>  &gldzmat){
 	//store the matrix indices of a neighborhood in a vector
     vector<vector<int> > matrixIndices;
 	//vector with indices of actual position
@@ -94,8 +95,8 @@ The function is mainly used get the size of the GLDZM matrix. \n
 @param[out]: boost::multi_array<T, 3> GLDZM: GLDZM matrix
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLDZMFeatures2D<T,R>::getMatrix( boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> distanceMap){
-    typedef boost::multi_array<double, 2>  gldzmat;
+boost::multi_array<float, 2> GLDZMFeatures2D<T,R>::getMatrix( boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> distanceMap){
+    typedef boost::multi_array<float, 2>  gldzmat;
 	//all grey levels present in VOI
     int sizeGreyLevels = (this->diffGreyLevels).size();
     //define the glcMatrices
@@ -152,9 +153,9 @@ void GLDZMFeatures2D<T, R>::calculateAllGLDZMFeatures2D(GLDZMFeatures2D<T,R> &gl
 	//read in the config values for the extended emphasis values
 	gldzmFeatures.getConfigValues(config);
 
-    boost::multi_array<double,2> GLDZM=gldzmFeatures.getMatrix(imageAttr.imageMatrix, distanceMap);
+    boost::multi_array<float,2> GLDZM=gldzmFeatures.getMatrix(imageAttr.imageMatrix, distanceMap);
 
-    double totalSum = gldzmFeatures.calculateTotalSum(GLDZM);
+	float totalSum = gldzmFeatures.calculateTotalSum(GLDZM);
     
 	rowSums=gldzmFeatures.calculateRowSums(GLDZM);
     colSums = gldzmFeatures.calculateColSums(GLDZM);
@@ -172,12 +173,12 @@ void GLDZMFeatures2D<T, R>::calculateAllGLDZMFeatures2D(GLDZMFeatures2D<T,R> &gl
     gldzmFeatures.calculateRunLengthNonUniformityNorm(rowSums, totalSum);
     gldzmFeatures.calculateRunLengthNonUniformity(rowSums, totalSum);
     gldzmFeatures.calculateRunPercentage3D(imageAttr.vectorOfMatrixElements, totalSum, 4);
-    boost::multi_array<double,2> probMatrix = gldzmFeatures.calculateProbMatrix(GLDZM, totalSum);
-    double meanGrey = gldzmFeatures.calculateMeanProbGrey(probMatrix);
+    boost::multi_array<float,2> probMatrix = gldzmFeatures.calculateProbMatrix(GLDZM, totalSum);
+	float meanGrey = gldzmFeatures.calculateMeanProbGrey(probMatrix);
 
     gldzmFeatures.calculateGreyLevelVar(probMatrix, meanGrey);
 
-    double meanRun = gldzmFeatures.calculateMeanProbRun(probMatrix);
+	float meanRun = gldzmFeatures.calculateMeanProbRun(probMatrix);
     gldzmFeatures.calculateRunLengthVar(probMatrix, meanRun);
     gldzmFeatures.calculateRunEntropy(probMatrix);
 }
@@ -229,8 +230,14 @@ void GLDZMFeatures2D<T, R>::writeCSVFileGLDZM(GLDZMFeatures2D<T,R> gldzmFeat, st
 
 
 template <class T, size_t R>
-void GLDZMFeatures2D<T, R>::writeOneFileGLDZM(GLDZMFeatures2D<T, R> gldzmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLDZMFeatures2D<T, R>::writeOneFileGLDZM(GLDZMFeatures2D<T, R> gldzmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -238,14 +245,40 @@ void GLDZMFeatures2D<T, R>::writeOneFileGLDZM(GLDZMFeatures2D<T, R> gldzmFeat, s
 	ofstream gldzmCSV;
 	gldzmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineGLDZMFeatures(features);
+	
 
 	vector<T> gldzmData;
 	extractGLDZMData(gldzmData, gldzmFeat);
-	for (int i = 0; i< gldzmData.size(); i++) {
-		gldzmCSV << "gldzmFeatures2Dmrg" << "," << features[i] << ",";
-		gldzmCSV << gldzmData[i];
-		gldzmCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		defineGLDZMFeatures(features);
+		for (int i = 0; i < gldzmData.size(); i++) {
+			gldzmCSV << "gldzmFeatures2Dmrg" << "," << features[i] << ",";
+			gldzmCSV << gldzmData[i];
+			gldzmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		features.clear();
+		defineGLDZMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "2Dmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < gldzmData.size(); i++) {
+			gldzmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			gldzmCSV << gldzmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			gldzmCSV << "\n";
+		}
+
 	}
 	gldzmCSV.close();
 }
@@ -268,6 +301,27 @@ void GLDZMFeatures2D<T, R>::defineGLDZMFeatures(vector<string> &features){
     features.push_back("Grey level variance GLDZM");
     features.push_back("Zone distance variance GLDZM");
     features.push_back("Zone distance entropy GLDZM");
+
+}
+
+template <class T, size_t R>
+void GLDZMFeatures2D<T, R>::defineGLDZMFeaturesOntology(vector<string> &features) {
+	features.push_back("Fdzm.sde");
+	features.push_back("Fdzm.lde");
+	features.push_back("Fdzm.lgze");
+	features.push_back("Fdzm.hgze");
+	features.push_back("Fdzm.sdlge");
+	features.push_back("Fdzm.sdhge");
+	features.push_back("Fdzm.ldlge");
+	features.push_back("Fdzm.ldhge");
+	features.push_back("Fdzm.glnu");
+	features.push_back("Fdzm.glnu.norm");
+	features.push_back("Fdzm.zdnu");
+	features.push_back("Fdzm.zdnu.norm");
+	features.push_back("Fdzm.z.perc");
+	features.push_back("Fdzm.gl.var");
+	features.push_back("Fdzm.zd.var");
+	features.push_back("Fdzm.zd.entr");
 
 }
 #endif // GLDZMFEATURES2D_H_INCLUDED

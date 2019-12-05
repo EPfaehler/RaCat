@@ -1,6 +1,7 @@
 #ifndef _READIMAGES_H_
 #define _READIMAGES_H_
-
+#include "itkGDCMImageIO.h"
+#include "itkMetaDataObject.h"
 #include "readInFeatureSelection.h"
 #include "morphologicalFeatures.h"
 #include "itkTypes.h"

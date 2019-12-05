@@ -22,19 +22,19 @@ class GLRLMFeatures2DMRG : GLRLMFeatures<T,R>  {
 
         double totalSum;
 
-        typedef boost::multi_array<double,2> glrlmMat;
+        typedef boost::multi_array<float,2> glrlmMat;
 
         int directionX;
         int directionY;
 
         int maxRunLength;
 
-		vector<double> actualSpacing;
+		vector<float> actualSpacing;
 		string normGLRLM;
 
-        boost::multi_array<double,2> createGLRLMatrixMRG(boost::multi_array<T, R> inputMatrix, int depth);
+        boost::multi_array<float,2> createGLRLMatrixMRG(boost::multi_array<T, R> inputMatrix, int depth);
         void extractGLRLMDataMRG(vector<T> &glrlmData, GLRLMFeatures2DMRG<T, R> glrlmFeatures);
-        void fill2DMatrices2DMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<double,2> &glrlMatrix, int depth, int ang);
+        void fill2DMatrices2DMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<float,2> &glrlMatrix, int depth, int ang);
 
 
     public:
@@ -42,9 +42,9 @@ class GLRLMFeatures2DMRG : GLRLMFeatures<T,R>  {
 		}
 		~GLRLMFeatures2DMRG() {
 		}
-        void calculateAllGLRLMFeatures2DMRG(GLRLMFeatures2DMRG<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<double> spacing, ConfigFile config);
+        void calculateAllGLRLMFeatures2DMRG(GLRLMFeatures2DMRG<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<float> spacing, ConfigFile config);
         void writeCSVFileGLRLM2DMRG(GLRLMFeatures2DMRG<T,R> glrlmFeat, string outputFolder);
-		void writeOneFileGLRLM2DMRG(GLRLMFeatures2DMRG<T, R> glrlmFeat, string outputFolder);
+		void writeOneFileGLRLM2DMRG(GLRLMFeatures2DMRG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr);
 
 };
 
@@ -56,7 +56,7 @@ In the method createGLRLMatrixMRG the GLRLM-matrix for given slice is calculated
 @param[out]: GLCM-matrix
 */
 template <class T, size_t R>
-boost::multi_array<double,2> GLRLMFeatures2DMRG<T, R>::createGLRLMatrixMRG(boost::multi_array<T,R> inputMatrix, int depth){
+boost::multi_array<float,2> GLRLMFeatures2DMRG<T, R>::createGLRLMatrixMRG(boost::multi_array<T,R> inputMatrix, int depth){
 
     int sizeMatrix = this->diffGreyLevels.size();
     glrlmMat sum(boost::extents[sizeMatrix][maxRunLength]);
@@ -84,7 +84,7 @@ In the method fill2DMatrices2DMRG the matrix is filled for the given image slice
 The function works analog to the function in GLRLMFeatures2DFullMerge
 */
 template <class T, size_t R>
-void GLRLMFeatures2DMRG<T, R>::fill2DMatrices2DMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<double,2> &glrlMatrix, int depth, int ang){
+void GLRLMFeatures2DMRG<T, R>::fill2DMatrices2DMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<float,2> &glrlMatrix, int depth, int ang){
 
     T actElement = 0;
 	int actGreyIndex;
@@ -134,7 +134,7 @@ void GLRLMFeatures2DMRG<T, R>::fill2DMatrices2DMRG(boost::multi_array<T, R> inpu
 
 
 template <class T, size_t R>
-void GLRLMFeatures2DMRG<T, R>::calculateAllGLRLMFeatures2DMRG(GLRLMFeatures2DMRG<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<double> spacing, ConfigFile config){
+void GLRLMFeatures2DMRG<T, R>::calculateAllGLRLMFeatures2DMRG(GLRLMFeatures2DMRG<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<float> spacing, ConfigFile config){
 
     this->diffGreyLevels = diffGrey;
 
@@ -157,26 +157,26 @@ void GLRLMFeatures2DMRG<T, R>::calculateAllGLRLMFeatures2DMRG(GLRLMFeatures2DMRG
     T sumRunLengthVar = 0;
     T sumRunEntropy = 0;
 
-    vector<double> rowSums;
-    vector<double> colSums;
+    vector<float> rowSums;
+    vector<float> colSums;
 
 
 
-    double meanGrey;
-    double meanRun;
+	float meanGrey;
+	float meanRun;
 
     int totalDepth = inputMatrix.shape()[2];
 
     maxRunLength = glrlm.getMaxRunLength(inputMatrix);
 	glrlmFeatures.getConfigValues(config);
     for(int depth = 0; depth < totalDepth; depth++){
-        boost::multi_array<double,2> glrlMatrix = createGLRLMatrixMRG(inputMatrix, depth);
-
+        boost::multi_array<float,2> glrlMatrix = createGLRLMatrixMRG(inputMatrix, depth);
+		
         totalSum = glrlmFeatures.calculateTotalSum(glrlMatrix);
         rowSums = glrlmFeatures.calculateRowSums(glrlMatrix);
         colSums = glrlmFeatures.calculateColSums(glrlMatrix);
 
-        boost::multi_array<double,2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
+        boost::multi_array<float,2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
         meanGrey = glrlmFeatures.calculateMeanProbGrey(probMatrix);
         meanRun = glrlmFeatures.calculateMeanProbRun(probMatrix);
 
@@ -224,12 +224,11 @@ void GLRLMFeatures2DMRG<T, R>::calculateAllGLRLMFeatures2DMRG(GLRLMFeatures2DMRG
         glrlmFeatures.calculateGreyLevelVar(probMatrix, meanGrey);
 		
 		sumGreyLevelVar += this->greyLevelVar;
+		
         glrlmFeatures.calculateRunLengthVar(probMatrix, meanRun);
 		sumRunLengthVar += this->runLengthVar;
 	    glrlmFeatures.calculateRunEntropy(probMatrix);
 		sumRunEntropy += this->runEntropy;
-		
-
     }
 
     this->shortRunEmphasis = sumShortRunEmphasis/ totalDepth;
@@ -246,9 +245,10 @@ void GLRLMFeatures2DMRG<T, R>::calculateAllGLRLMFeatures2DMRG(GLRLMFeatures2DMRG
     this->runLengthNonUniformityNorm = sumRunLengthNonUniformityNorm/ totalDepth;
     this->runPercentage = sumRunPercentage/ totalDepth;
 
-    this->greyLevelVar = sumGreyLevelVar/ totalDepth;
-    this->runLengthVar = sumRunLengthVar/ totalDepth;
-    this->runEntropy = sumRunEntropy/ totalDepth;
+    this->greyLevelVar = sumGreyLevelVar/ (totalDepth );
+    this->runLengthVar = sumRunLengthVar/ (totalDepth );
+    this->runEntropy = sumRunEntropy/ (totalDepth);
+
 
 }
 
@@ -278,8 +278,14 @@ void GLRLMFeatures2DMRG<T, R>::writeCSVFileGLRLM2DMRG(GLRLMFeatures2DMRG<T, R> g
 }
 
 template <class T, size_t R>
-void GLRLMFeatures2DMRG<T, R>::writeOneFileGLRLM2DMRG(GLRLMFeatures2DMRG<T, R> glrlmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLRLMFeatures2DMRG<T, R>::writeOneFileGLRLM2DMRG(GLRLMFeatures2DMRG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -287,14 +293,38 @@ void GLRLMFeatures2DMRG<T, R>::writeOneFileGLRLM2DMRG(GLRLMFeatures2DMRG<T, R> g
 	ofstream glrlmCSV;
 	glrlmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	glrlm.defineGLRLMFeatures(features);
+	
 
 	vector<T> glrlmData;
 	extractGLRLMDataMRG(glrlmData, glrlmFeat);
-	for (int i = 0; i< glrlmData.size(); i++) {
-		glrlmCSV << "GLRLMFeatures2DWmrg" << "," << features[i] << ",";
-		glrlmCSV << glrlmData[i];
-		glrlmCSV << "\n";
+	if (config.csvOutput == 1) {
+		glrlm.defineGLRLMFeatures(features);
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << "GLRLMFeatures2DWmrg" << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i];
+			glrlmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glrlm.defineGLRLMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "2DWmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glrlmCSV << "\n";
+		}
+
 	}
 	glrlmCSV.close();
 }

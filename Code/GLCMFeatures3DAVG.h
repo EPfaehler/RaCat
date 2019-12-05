@@ -19,11 +19,11 @@ class GLCMFeatures3DAVG : GLCMFeatures<T, R>{
 private:
 	GLCMFeatures<T, R> glcm;
 	int sizeMatrix;
-	typedef boost::multi_array<double, 2>  glcmat;
+	typedef boost::multi_array<float, 2>  glcmat;
 	void defineGLCMFeatures3DAVG(vector<string> &features);
 	void extractGLCMData3D(vector<T> &glcmData, GLCMFeatures3DAVG<T, R> glcmFeatures);
-	void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &sum, int angle, int directionZ);
-	boost::multi_array<double, 2> getMatrixSum(boost::multi_array<T, R> inputMatrix, int ang, int directionZ);
+	void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &sum, int angle, int directionZ);
+	boost::multi_array<float, 2> getMatrixSum(boost::multi_array<T, R> inputMatrix, int ang, int directionZ);
 	//store different grey levels in vector
 	vector<T> diffGreyLevels;
 	vector<T> diagonalProbabilities;
@@ -41,7 +41,7 @@ public:
 	~GLCMFeatures3DAVG() {
 	}
 	void writeCSVFileGLCM3DAVG(GLCMFeatures3DAVG<T, R> glcmFeat, string outputFolder);
-	void writeOneFileGLCM3DAVG(GLCMFeatures3DAVG<T, R> glcmFeat, string outputFolder);
+	void writeOneFileGLCM3DAVG(GLCMFeatures3DAVG<T, R> glcmFeat, ConfigFile config, int &parameterSpaceNr);
 	void calculateAllGLCMFeatures3DAVG(GLCMFeatures3DAVG<T, R> &glcmFeat, boost::multi_array<T, R> inputMatrix, float maxIntensity);
    
 };
@@ -59,7 +59,7 @@ In the method fill3DMatrices the matrix is filled for all directions
 The function works analog to the 2D method
 */
 template <class T, size_t R>
-void GLCMFeatures3DAVG<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int angle, int directionZ) {
+void GLCMFeatures3DAVG<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int angle, int directionZ) {
 	std::vector<std::pair<T, T> > neighbours;
 	//get the vector of the nieghbour pairs
 	neighbours = glcm.getNeighbours3D(inputMatrix, angle, directionZ);
@@ -83,7 +83,7 @@ In the method getMatrixSum calculates the sum from one GLCM matrix and its inver
 @param[in] directionZ: determines the direction in the depth
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLCMFeatures3DAVG<T, R>::getMatrixSum(boost::multi_array<T, R> inputMatrix, int ang, int directionZ) {
+boost::multi_array<float, 2> GLCMFeatures3DAVG<T, R>::getMatrixSum(boost::multi_array<T, R> inputMatrix, int ang, int directionZ) {
 
 	glcmat GLCMatrix(boost::extents[sizeMatrix][sizeMatrix]);
 
@@ -146,12 +146,12 @@ void GLCMFeatures3DAVG<T, R>::calculateAllGLCMFeatures3DAVG(GLCMFeatures3DAVG<T,
 				matrixSum(sum, inverseMatrix);
 
 				//calculate the sum of all matrix elements (= the number of neighbor-pairs in the matrix
-				double sumMatrElement = accumulate(sum.origin(), sum.origin() + sum.num_elements(), 0);
+				float sumMatrElement = accumulate(sum.origin(), sum.origin() + sum.num_elements(), 0);
 				//divide the whole matrix by the sum to obtain matrix elements representing the probabilities
 				//of the occurence of a neighbor pair
 				if (sumMatrElement != 0) {
 					transform(sum.origin(), sum.origin() + sum.num_elements(),
-						sum.origin(), bind2nd(std::divides<double>(), int(sumMatrElement)));
+						sum.origin(), bind2nd(std::divides<float>(), int(sumMatrElement)));
 				}
 
 				glcmFeatures.calculateJointMaximum(sum);
@@ -211,7 +211,7 @@ void GLCMFeatures3DAVG<T, R>::calculateAllGLCMFeatures3DAVG(GLCMFeatures3DAVG<T,
 
 		else {
 			directionZ = 1;
-			boost::multi_array<double, 2> GLCMatrix = glcmFeatures.getMatrixSum(inputMatrix, ang, directionZ);
+			boost::multi_array<float, 2> GLCMatrix = glcmFeatures.getMatrixSum(inputMatrix, ang, directionZ);
 			inverse(GLCMatrix, inverseMatrix);
 			sum = GLCMatrix;
 			matrixSum(sum, inverseMatrix);
@@ -328,8 +328,14 @@ void GLCMFeatures3DAVG<T, R>::writeCSVFileGLCM3DAVG(GLCMFeatures3DAVG<T,R> glcmF
 }
 
 template <class T, size_t R>
-void GLCMFeatures3DAVG<T, R>::writeOneFileGLCM3DAVG(GLCMFeatures3DAVG<T, R> glcmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLCMFeatures3DAVG<T, R>::writeOneFileGLCM3DAVG(GLCMFeatures3DAVG<T, R> glcmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -337,14 +343,37 @@ void GLCMFeatures3DAVG<T, R>::writeOneFileGLCM3DAVG(GLCMFeatures3DAVG<T, R> glcm
 	ofstream glcmCSV;
 	glcmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineGLCMFeatures3DAVG(features);
 
 	vector<T> glcmData;
 	extractGLCMData3D(glcmData, glcmFeat);
-	for (int i = 0; i< glcmData.size(); i++) {
-		glcmCSV << "glcmFeatures3Davg" << "," << features[i] << ",";
-		glcmCSV << glcmData[i];
-		glcmCSV << "\n";
+	if (config.csvOutput == 1) {
+		glcm.defineGLCMFeatures(features);
+		for (int i = 0; i < glcmData.size(); i++) {
+			glcmCSV << "glcmFeatures3Davg" << "," << features[i] << ",";
+			glcmCSV << glcmData[i];
+			glcmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glcm.defineGLCMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "3DAVG" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glcmData.size(); i++) {
+			glcmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glcmCSV << glcmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glcmCSV << "\n";
+		}
+
 	}
 	glcmCSV.close();
 }

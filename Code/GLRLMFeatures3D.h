@@ -18,20 +18,20 @@ class GLRLMFeatures3D : GLRLMFeatures<T,R>{
 private:
     GLRLMFeatures<T,R> glrlm;
     GLRLMFeatures3DAVG<T,R> glrlm3D;
-	vector<double> actualSpacing;
+	vector<float> actualSpacing;
 	string normGLRLM;
-    double totalSum;
-    boost::multi_array<double, 2> createGLRLMatrix3D(boost::multi_array<T, R> inputMatrix);
+	float totalSum;
+    boost::multi_array<float, 2> createGLRLMatrix3D(boost::multi_array<T, R> inputMatrix);
     void extractGLRLMData3D(vector<T> &glrlmData, GLRLMFeatures3D<T, R> glrlmFeatures);
-    void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, int directionX, int directionY, int directionZ);
+    void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, int directionX, int directionY, int directionZ);
     int maxRunLength;
     int totalNrVoxels;
 public:
 	GLRLMFeatures3D(){}
 	~GLRLMFeatures3D(){}
-    void calculateAllGLRLMFeatures3D(GLRLMFeatures3D<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, vector<double> spacing, ConfigFile config);
+    void calculateAllGLRLMFeatures3D(GLRLMFeatures3D<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, vector<float> spacing, ConfigFile config);
     void writeCSVFileGLRLM3D(GLRLMFeatures3D<T,R> glrlmFeat, string outputFolder);
-	void writeOneFileGLRLM3D(GLRLMFeatures3D<T, R> glrlmFeat, string outputFolder);
+	void writeOneFileGLRLM3D(GLRLMFeatures3D<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr);
 
 };
 
@@ -46,9 +46,9 @@ The method getNeighbors3D stores all neighbor pairs for the desired angle and th
 The direction-parameters determine in which direction the run length is calculated
 */
 template <class T, size_t R>
-void GLRLMFeatures3D<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, int directionX, int directionY, int directionZ){
-    double actGreyLevel = 0;
-    double actElement = 0;
+void GLRLMFeatures3D<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, int directionX, int directionY, int directionZ){
+	float actGreyLevel = 0;
+	float actElement = 0;
     int runLength=0;
     int maxRowNr = inputMatrix.shape()[0];
     int maxColNr = inputMatrix.shape()[1];
@@ -121,8 +121,8 @@ The method createGLRLMatrix3D sums up all matrices of the different directions
 @param[in] inputMatrix: the original matrix of the VOI
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLRLMFeatures3D<T, R>::createGLRLMatrix3D(boost::multi_array<T,R> inputMatrix){
-    typedef boost::multi_array<double, 2> glrlmat;
+boost::multi_array<float, 2> GLRLMFeatures3D<T, R>::createGLRLMatrix3D(boost::multi_array<T,R> inputMatrix){
+    typedef boost::multi_array<float, 2> glrlmat;
 
     int directionX;
     int directionY;
@@ -146,15 +146,15 @@ boost::multi_array<double, 2> GLRLMFeatures3D<T, R>::createGLRLMatrix3D(boost::m
 }
 
 template <class T, size_t R>
-void GLRLMFeatures3D<T, R>::calculateAllGLRLMFeatures3D(GLRLMFeatures3D<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElement, vector<double> spacing, ConfigFile config){
+void GLRLMFeatures3D<T, R>::calculateAllGLRLMFeatures3D(GLRLMFeatures3D<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElement, vector<float> spacing, ConfigFile config){
     this->diffGreyLevels = diffGrey;
 	actualSpacing = spacing;
 	normGLRLM = config.normGLRLM;
-	boost::multi_array<double,2> glrlMatrix = glrlmFeatures.createGLRLMatrix3D(inputMatrix);
+	boost::multi_array<float,2> glrlMatrix = glrlmFeatures.createGLRLMatrix3D(inputMatrix);
 	glrlmFeatures.getConfigValues(config);
     totalSum=glrlmFeatures.calculateTotalSum(glrlMatrix);
-    vector<double> rowSums =glrlmFeatures.calculateRowSums(glrlMatrix);
-    vector<double> colSums=glrlmFeatures.calculateColSums(glrlMatrix);
+    vector<float> rowSums =glrlmFeatures.calculateRowSums(glrlMatrix);
+    vector<float> colSums=glrlmFeatures.calculateColSums(glrlMatrix);
     glrlmFeatures.calculateShortRunEmphasis(rowSums, totalSum);
     glrlmFeatures.calculateLongRunEmphasis(rowSums, totalSum);
     glrlmFeatures.calculateLowGreyEmph(colSums, totalSum);
@@ -168,12 +168,12 @@ void GLRLMFeatures3D<T, R>::calculateAllGLRLMFeatures3D(GLRLMFeatures3D<T,R> &gl
     glrlmFeatures.calculateRunLengthNonUniformityNorm(rowSums, totalSum);
     glrlmFeatures.calculateRunLengthNonUniformity(rowSums, totalSum);
     glrlmFeatures.calculateRunPercentage3D(vectorMatrElement, totalSum, 13);
-    boost::multi_array<double,2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
-    double meanGrey = glrlmFeatures.calculateMeanProbGrey(probMatrix);
+    boost::multi_array<float,2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
+	float meanGrey = glrlmFeatures.calculateMeanProbGrey(probMatrix);
 
     glrlmFeatures.calculateGreyLevelVar(probMatrix, meanGrey);
 
-    double meanRun = glrlmFeatures.calculateMeanProbRun(probMatrix);
+	float meanRun = glrlmFeatures.calculateMeanProbRun(probMatrix);
     glrlmFeatures.calculateRunLengthVar(probMatrix, meanRun);
 
     glrlmFeatures.calculateRunEntropy(probMatrix);
@@ -227,8 +227,14 @@ void GLRLMFeatures3D<T, R>::writeCSVFileGLRLM3D(GLRLMFeatures3D<T,R> glrlmFeat, 
 
 
 template <class T, size_t R>
-void GLRLMFeatures3D<T, R>::writeOneFileGLRLM3D(GLRLMFeatures3D<T, R> glrlmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLRLMFeatures3D<T, R>::writeOneFileGLRLM3D(GLRLMFeatures3D<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -236,14 +242,37 @@ void GLRLMFeatures3D<T, R>::writeOneFileGLRLM3D(GLRLMFeatures3D<T, R> glrlmFeat,
 	ofstream glrlmCSV;
 	glrlmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	glrlmFeat.defineGLRLMFeatures(features);
 
 	vector<T> glrlmData;
 	extractGLRLMData3D(glrlmData, glrlmFeat);
-	for (int i = 0; i< glrlmData.size(); i++) {
-		glrlmCSV << "GLRLMFeatures3Dmrg" << "," << features[i] << ",";
-		glrlmCSV << glrlmData[i];
-		glrlmCSV << "\n";
+	if (config.csvOutput == 1) {
+		glrlmFeat.defineGLRLMFeatures(features);
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << "GLRLMFeatures3Dmrg" << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i];
+			glrlmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glrlmFeat.defineGLRLMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		featSpaceTable << parameterSpaceName << "," << "3Dmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glrlmCSV << "\n";
+		}
+
 	}
 	glrlmCSV.close();
 }

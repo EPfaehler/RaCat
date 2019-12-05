@@ -22,19 +22,18 @@ class NGLDMFeatures3D : public NGLDMFeatures2DMRG<T,R>{
 
 		int dist;
 		int coarseParam;
-
+		NGLDMFeatures2DMRG<T, R> ngldm;
 		vector<T> sumProbRows;
 		vector<T> sumProbCols;
-		vector<double> rowSums;
-		vector<double> colSums;
-		NGLDMFeatures2DMRG<T, R> ngldm;
-		void defineNGLDMFeatures3D(vector<string> &features);
+		vector<float> rowSums;
+		vector<float> colSums;
         void extractNGLDMData3D(vector<T> &ngldmData, NGLDMFeatures3D<T, R> ngldmFeatures);
 
     public:
+		//vector<T> diffGreyLevels;
         void writeCSVFileNGLDM3D(NGLDMFeatures3D<T,R> ngldmFeat, string outputFolder);
-		void writeOneFileNGLDM3D(NGLDMFeatures3D<T, R> ngldmFeat, string outputFolder);
-        void calculateAllNGLDMFeatures3D(NGLDMFeatures3D<T,R> &ngldmFeatures, boost::multi_array<double, 2> ngldm3DMatrix, Image<T, R> imageAttr, ConfigFile config);
+		void writeOneFileNGLDM3D(NGLDMFeatures3D<T, R> ngldmFeat, ConfigFile config, int &parameterSpaceNr);
+        void calculateAllNGLDMFeatures3D(NGLDMFeatures3D<T,R> &ngldmFeatures, boost::multi_array<float, 2> ngldm3DMatrix, Image<T, R> imageAttr, ConfigFile config);
 };
 
 
@@ -48,22 +47,25 @@ class NGLDMFeatures3D : public NGLDMFeatures2DMRG<T,R>{
 This function calculates all NGLDM features.
 */
 template <class T, size_t R>
-void NGLDMFeatures3D<T, R>::calculateAllNGLDMFeatures3D(NGLDMFeatures3D<T,R> &ngldmFeatures, boost::multi_array<double, 2> NGLDM, Image<T,R> imageAttr, ConfigFile config){
+void NGLDMFeatures3D<T, R>::calculateAllNGLDMFeatures3D(NGLDMFeatures3D<T,R> &ngldmFeatures, boost::multi_array<float, 2> NGLDM, Image<T,R> imageAttr, ConfigFile config){
 	ngldmFeatures.getConfigValues(config);
 
 	coarseParam = config.coarsenessParam;
 	dist = config.distNGLDM;
-
+	
+	
 	this->diffGreyLevels = imageAttr.diffGreyLevels;
-	if (boost::size(diffGreyLevels) > 1) {
-		double totalSum = ngldmFeatures.calculateTotalSum(NGLDM);
+	
+	if (boost::size(this->diffGreyLevels) > 1) {
+		float totalSum = ngldmFeatures.calculateTotalSum(NGLDM);
 		rowSums = ngldmFeatures.calculateRowSums(NGLDM);
 		colSums = ngldmFeatures.calculateColSums(NGLDM);
-
 		ngldmFeatures.calculateShortRunEmphasis(rowSums, totalSum);
 		ngldmFeatures.calculateLongRunEmphasis(rowSums, totalSum);
+		
 		ngldmFeatures.calculateLowGreyEmph(colSums, totalSum);
 		ngldmFeatures.calculateHighGreyEmph(colSums, totalSum);
+		
 		ngldmFeatures.calculateShortRunLow(NGLDM, totalSum);
 		ngldmFeatures.calculateShortRunHigh(NGLDM, totalSum);
 		ngldmFeatures.calculateLongRunLowEmph(NGLDM, totalSum);
@@ -72,13 +74,15 @@ void NGLDMFeatures3D<T, R>::calculateAllNGLDMFeatures3D(NGLDMFeatures3D<T,R> &ng
 		ngldmFeatures.calculateGreyNonUniformityNorm(colSums, totalSum);
 		ngldmFeatures.calculateRunLengthNonUniformityNorm(rowSums, totalSum);
 		ngldmFeatures.calculateRunLengthNonUniformity(rowSums, totalSum);
+		
 		ngldmFeatures.calculateRunPercentage3D(imageAttr.vectorOfMatrixElements, totalSum, 1);
-		boost::multi_array<double, 2> probMatrix = ngldmFeatures.calculateProbMatrix(NGLDM, totalSum);
-		double meanGrey = ngldmFeatures.calculateMeanProbGrey(probMatrix);
+		std::cout << "HERE" << std::endl;
+		boost::multi_array<float, 2> probMatrix = ngldmFeatures.calculateProbMatrix(NGLDM, totalSum);
+		float meanGrey = ngldmFeatures.calculateMeanProbGrey(probMatrix);
 
 		ngldmFeatures.calculateGreyLevelVar(probMatrix, meanGrey);
-
-		double meanRun = ngldmFeatures.calculateMeanProbRun(probMatrix);
+		
+		float meanRun = ngldmFeatures.calculateMeanProbRun(probMatrix);
 		ngldmFeatures.calculateRunLengthVar(probMatrix, meanRun);
 		ngldmFeatures.calculateRunEntropy(probMatrix);
 		ngldmFeatures.calculateDependenceCountEnergy(probMatrix);
@@ -101,7 +105,7 @@ void NGLDMFeatures3D<T, R>::writeCSVFileNGLDM3D(NGLDMFeatures3D<T,R> ngldmFeat, 
     ofstream ngldmCSV;
     ngldmCSV.open (name);
     vector<string> features;
-    defineNGLDMFeatures3D(features);
+	ngldm.defineNGLDMFeatures(features);
 
     vector<T> ngldmData;
     extractNGLDMData3D(ngldmData, ngldmFeat);
@@ -114,8 +118,14 @@ void NGLDMFeatures3D<T, R>::writeCSVFileNGLDM3D(NGLDMFeatures3D<T,R> ngldmFeat, 
 }
 
 template <class T, size_t R>
-void NGLDMFeatures3D<T, R>::writeOneFileNGLDM3D(NGLDMFeatures3D<T, R> ngldmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void NGLDMFeatures3D<T, R>::writeOneFileNGLDM3D(NGLDMFeatures3D<T, R> ngldmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -123,14 +133,38 @@ void NGLDMFeatures3D<T, R>::writeOneFileNGLDM3D(NGLDMFeatures3D<T, R> ngldmFeat,
 	ofstream ngldmCSV;
 	ngldmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineNGLDMFeatures3D(features);
 
 	vector<T> ngldmData;
 	extractNGLDMData3D(ngldmData, ngldmFeat);
-	for (int i = 0; i< ngldmData.size(); i++) {
-		ngldmCSV << "ngldmFeatures3D" <<","<< features[i] << ",";
-		ngldmCSV << ngldmData[i];
-		ngldmCSV << "\n";
+	if (config.csvOutput == 1) {
+		ngldm.defineNGLDMFeatures(features);
+		for (int i = 0; i < ngldmData.size(); i++) {
+			ngldmCSV << "ngldmFeatures3Dmrg" << "," << features[i] << ",";
+			ngldmCSV << ngldmData[i];
+			ngldmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		features.clear();
+		ngldm.defineNGLDMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "3Dmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < ngldmData.size(); i++) {
+			ngldmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			ngldmCSV << ngldmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			ngldmCSV << "\n";
+		}
+
 	}
 	ngldmCSV.close();
 }
@@ -157,25 +191,5 @@ void NGLDMFeatures3D<T, R>::extractNGLDMData3D(vector<T> &ngldmData, NGLDMFeatur
     ngldmData.push_back(ngldmFeatures.dependenceCountEnergy);
 
 }
-template <class T, size_t R>
-void NGLDMFeatures3D<T, R>::defineNGLDMFeatures3D(vector<string> &features){
-	features.push_back("Low dependence emphasis");
-	features.push_back("High dependence emphasis");
-	features.push_back("Low grey level count emphasis");
-	features.push_back("High grey level count emphasis");
-	features.push_back("Low dependence low grey level emphasis");
-	features.push_back("Low dependence high grey level emphasis");
-	features.push_back("High dependence low grey level emphasis");
-	features.push_back("High dependence high grey level emphasis");
-	features.push_back("Grey level non uniformity");
-	features.push_back("Grey level non uniformity normalized");
-	features.push_back("Dependence count non uniformity");
-	features.push_back("Dependence count non uniformity normalized");
-	features.push_back("Dependence count percentage");
-	features.push_back("Grey level variance");
-	features.push_back("Dependence count variance");
-	features.push_back("Dependence count entropy");
-	features.push_back("dependence Count Energy");
 
-}
 #endif // NGLDMFEATURES3D_H_INCLUDED

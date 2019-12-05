@@ -80,7 +80,7 @@ void CalculateRelFeatures(Image<float, 3> imageAttr, ImageType *image, ImageType
 
 	boost::property_tree::ptree pt;
 	//if a feature selection file is given as parameter (i.e. not all features are calculated)
-	if (config.calculateAllFeatures == 0) {
+	if (config.calculateAllFeatures == 0){
 		try {
 			//get feature selection file
 			boost::property_tree::ini_parser::read_ini(config.featureSelectionLocation, pt);
@@ -88,23 +88,28 @@ void CalculateRelFeatures(Image<float, 3> imageAttr, ImageType *image, ImageType
 			localInt = pt.get<std::string>("LocalIntensityFeatures.CalculateLocalIntFeat");
 			statFeat = pt.get<std::string>("StatisticalFeatures.CalculateStatFeat");
 			intVolFeatures = pt.get<std::string>("IntensityVolume.CalculateIntensityVolume");
-			writeLogFile(config.outputFolder,"The feature selection file used: " + config.featureSelectionLocation);
+			std::string forLog = "The feature selection file used: " + config.featureSelectionLocation;
+			writeLogFile(config.outputFolder, forLog);
+			std::cout << "Morphological features are calculated" << std::endl;
 
 		}
 		catch (...) {
 			std::cout << "Feature selection file was not found." << std::endl;
 			exit(EXIT_FAILURE);
 		}
+			
+	
+		
+		
 	}
-	//calculate the required features
 	if (morph == a || config.calculateAllFeatures == 1) {
 		MorphologicalFeatures<float, 3> morph;
-		morph.calculateAllMorphologicalFeatures(morph, imageAttr,  config);
+		morph.calculateAllMorphologicalFeatures(morph, imageAttr, config);
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
-			morph.writeCSVFileMorphological(morph, config.outputFolder);
+			morph.writeCSVFileMorphological(morph, config.outputFolder, config);
 		}
 		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			morph.writeOneFileMorphological(morph, config.outputFolder);
+			morph.writeOneFileMorphological(morph, config);
 		}
 		string forLog = "Morphological features were calculated.";
 		writeLogFile(config.outputFolder, forLog);
@@ -117,10 +122,11 @@ void CalculateRelFeatures(Image<float, 3> imageAttr, ImageType *image, ImageType
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			localInt.writeCSVFileLocalIntensity(localInt, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			localInt.writeOneFileLocalInt(localInt, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			localInt.writeOneFileLocalInt(localInt, config);
 		}
-		writeLogFile(config.outputFolder, string("Local intensity features were calculated."));
+		std::string forLog = "Local intensity features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 		std::cout << "Local intensity features are calculated" << std::endl;
 	}
 	
@@ -130,23 +136,25 @@ void CalculateRelFeatures(Image<float, 3> imageAttr, ImageType *image, ImageType
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			statFeatures.writeCSVFileStatistic(statFeatures, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			statFeatures.writeOneFileStatistic(statFeatures, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1)|| config.ontologyOutput == 1) {
+			statFeatures.writeOneFileStatistic(statFeatures, config);
 		}
-		writeLogFile(config.outputFolder, string("Statistical features were calculated."));
+		std::string forLog = "Statistical features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 		std::cout << "Statistical Features are calculated" << std::endl;
 	}
-	if (intVolFeatures == a || config.calculateAllFeatures == 1) {
+	if ((intVolFeatures == a || config.calculateAllFeatures == 1)&&(config.discretizeIVH ==0 )) {
 		IntensityVolumeFeatures<float, 3> intVol;
-		if (config.discretizeIVHSeparated == 0 && config.discretizeIVH ==0) {
+		if (config.discretizeIVHSeparated == 0 ) {
 			intVol.calculateAllIntensVolFeatures(intVol, imageAttr.imageMatrix, imageAttr.diffGreyLevels);
 			if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 				intVol.writeCSVFileIntVol(intVol, config.outputFolder);
 			}
-			else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-				intVol.writeOneFileIntVol(intVol, config.outputFolder);
+			else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+				intVol.writeOneFileIntVol(intVol, config);
 			}
-			writeLogFile(config.outputFolder, string("Intensity volume features were calculated."));
+			std::string forLog = "Intensity volume features were calculated.";
+			writeLogFile(config.outputFolder, forLog);
 			std::cout << "Intensity volume features are calculated" << std::endl;
 		}
 		
@@ -160,7 +168,7 @@ In the function calculateRelFeaturesDiscretized, all features that do require in
 If one feature group should not be calculated, this group is skipped from the calculation \n
 The feature values are stored in the outputfile set by the user.
 */
-void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> spacing, ConfigFile config)
+void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<float> spacing, ConfigFile config)
 {
 
 	std::string a = "1";
@@ -198,33 +206,27 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 			boost::property_tree::ini_parser::read_ini(config.featureSelectionLocation, pt);
 			inthist = pt.get<std::string>("IntensityHistogramFeatures.CalculateIntensityHistogramFeat");
 			intVolFeatures = pt.get<std::string>("IntensityVolume.CalculateIntensityVolume");
-
 			glcmFeatures2DAVG = pt.get<std::string>("GLCMFeatures2DAVG.CalculateGLCMFeatures2DAVG");
 			glcmFeatures2DDMRG = pt.get<std::string>("GLCMFeatures2DDMRG.CalculateGLCMFeatures2DDMRG");
 			glcmFeatures2DMRG = pt.get<std::string>("GLCMFeatures2DMRG.CalculateGLCMFeatures2DMRG");
 			glcmFeat2DVMRG = pt.get<std::string>("GLCMFeatures2DVMRG.CalculateGLCMFeatures2DVMRG");
 			glcmFeat3DAVG = pt.get<std::string>("GLCMFeatures3DAVG.CalculateGLCMFeatures3DAVG");
 			glcmFeat3DMRG = pt.get<std::string>("GLCMFeatures3DMRG.CalculateGLCMFeatures3DMRG");
-
 			glrlmFeatures2DAVG = pt.get<std::string>("GLRLMFeatures2DAVG.CalculateGLRLMFeatures2DAVG");
 			glrlmFeatures2DDMRG = pt.get<std::string>("GLRLMFeatures2DDMRG.CalculateGLRLMFeatures2DDMRG");
 			glrlmFeat2DMRG = pt.get<std::string>("GLRLMFeatures2DMRG.CalculateGLRLMFeatures2DMRG");
 			glrlmFeatures2DVMRG = pt.get<std::string>("GLRLMFeatures2DVMRG.CalculateGLRLMFeatures2DVMRG");
 			glrlmFeatures3DAVG = pt.get<std::string>("GLRLMFeatures3DAVG.CalculateGLRLMFeatures3DAVG");
 			glrlmFeatures3DMRG = pt.get<std::string>("GLRLMFeatures3DMRG.CalculateGLRLMFeatures3DMRG");
-
 			glszmFeatures2DAVG = pt.get<std::string>("GLSZMFeatures2DAVG.CalculateGLSZMFeatures2DAVG");
 			glszmFeatures2DMRG = pt.get<std::string>("GLSZMFeatures2DMRG.CalculateGLSZMFeatures2DMRG");
 			glszmFeatures3D = pt.get<std::string>("GLSZMFeatures3D.CalculateGLSZMFeatures3D");
-
 			ngtdmFeatures2DAVG = pt.get<std::string>("NGTDMFeatures2DAVG.CalculateNGTDMFeatures2DAVG");
 			ngtdmFeat2DMRG = pt.get<std::string>("NGTDMFeatures2DMRG.CalculateNGTDMFeatures2DMRG");
 			ngtdmFeatures3D = pt.get<std::string>("NGTDMFeatures3D.CalculateNGTDMFeatures3D");
-
 			gldzmFeatures2DAVG = pt.get<std::string>("GLDZMFeatures2DAVG.CalculateGLDZMFeatures2DAVG");
 			gldzmFeatures2D = pt.get<std::string>("GLDZMFeatures2D.CalculateGLDZMFeatures2D");
 			gldzmFeatures3D = pt.get<std::string>("GLDZMFeatures3D.CalculateGLDZMFeatures3D");
-
 			ngldmFeat2DAVG = pt.get<std::string>("NGLDMFeatures2DAVG.CalculateNGLDMFeatures2DAVG");
 			ngldmFeat2DMRG = pt.get<std::string>("NGLDMFeatures2DMRG.CalculateNGLDMFeatures2DMRG");
 			ngldmFeat3D = pt.get<std::string>("NGLDMFeatures3D.CalculateNGLDMFeatures3D");
@@ -234,50 +236,53 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 			exit(EXIT_FAILURE);
 		}
 	}
+	if ((intVolFeatures == a || config.calculateAllFeatures == 1) &&( config.discretizeIVHSeparated == 1 && config.discretizeIVH == 1) ){
+		IntensityVolumeFeatures<float, 3> intVol;
 
-   
+		intVol.calculateAllIntensVolFeatures(intVol, imageAttr.imageMatrixIVH, imageAttr.diffGreyLevels);
+		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
+			intVol.writeCSVFileIntVol(intVol, config.outputFolder);
+		}
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			intVol.writeOneFileIntVol(intVol, config);
+		}
+		std::string forLog = "Intensity volume features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
+		std::cout << "Intensity volume features are calculated" << std::endl;
+	}
+
+	if ((intVolFeatures == a || config.calculateAllFeatures == 1) &&( config.discretizeIVHSeparated == 0 && config.discretizeIVH == 1)) {
+		IntensityVolumeFeatures<float, 3> intVol;
+
+		intVol.calculateAllIntensVolFeatures(intVol, imageAttr.imageMatrix, imageAttr.diffGreyLevels);
+
+		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
+			intVol.writeCSVFileIntVol(intVol, config.outputFolder);
+		}
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			intVol.writeOneFileIntVol(intVol, config);
+		}
+		std::string forLog = "Intensity volume features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
+		std::cout << "Intensity volume features are calculated" << std::endl;
+	}
+	
    if (inthist == a || config.calculateAllFeatures == 1){
         IntensityHistogram<float, 3> intensityHist;
         intensityHist.calculateAllIntFeatures(intensityHist, imageAttr.imageMatrix, imageAttr.vectorOfMatrixElements, imageAttr.diffGreyLevels);
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			intensityHist.writeCSVFileIntensity(intensityHist, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			intensityHist.writeOneFileIntensity(intensityHist, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			intensityHist.writeOneFileIntensity(intensityHist, config);
 		}
-		writeLogFile(config.outputFolder, string("Intensity histogram features were calculated."));
+		std::string forLog = "Intensity histogram features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 		std::cout << "Intensity histogram features are calculated" << std::endl;
     }
 
    
-   if (intVolFeatures == a || config.calculateAllFeatures == 1 && config.discretizeIVHSeparated == 1 && config.discretizeIVH ==1) {
-	   IntensityVolumeFeatures<float, 3> intVol;
-
-	   intVol.calculateAllIntensVolFeatures(intVol, imageAttr.imageMatrixIVH, imageAttr.diffGreyLevels);
-	   if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
-		   intVol.writeCSVFileIntVol(intVol, config.outputFolder);
-	   }
-	   else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-		   intVol.writeOneFileIntVol(intVol, config.outputFolder);
-	   }
-	   writeLogFile(config.outputFolder, string("Intensity volume features were calculated."));
-	   std::cout << "Intensity volume features are calculated" << std::endl;
-   }
    
-   if (intVolFeatures == a || config.calculateAllFeatures == 1 && config.discretizeIVHSeparated == 0 && config.discretizeIVH == 1) {
-	   IntensityVolumeFeatures<float, 3> intVol;
-
-	   intVol.calculateAllIntensVolFeatures(intVol, imageAttr.imageMatrix, imageAttr.diffGreyLevels);
-	   
-	   if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
-		   intVol.writeCSVFileIntVol(intVol, config.outputFolder);
-	   }
-	   else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-		   intVol.writeOneFileIntVol(intVol, config.outputFolder);
-	   }
-	   writeLogFile(config.outputFolder, string("Intensity volume features were calculated."));
-	   std::cout << "Intensity volume features are calculated" << std::endl;
-   }
     float maxIntensity = float(*max_element(imageAttr.vectorOfMatrixElements.begin(), imageAttr.vectorOfMatrixElements.end()));
 	
 	if (glcmFeatures2DAVG == a || config.calculateAllFeatures == 1) {
@@ -286,10 +291,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glcm2DAVG.writeCSVFileGLCM2DAVG(glcm2DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glcm2DAVG.writeOneFileGLCM2DAVG(glcm2DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glcm2DAVG.writeOneFileGLCM2DAVG(glcm2DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLCM2DAVG features were calculated."));
+		std::string forLog = "GLCM2DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	if (glcmFeatures2DDMRG == a || config.calculateAllFeatures == 1) {
 		
@@ -298,10 +304,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glcm2DDMRG.writeCSVFileGLCM2DDMRG(glcm2DDMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glcm2DDMRG.writeOneFileGLCM2DDMRG(glcm2DDMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glcm2DDMRG.writeOneFileGLCM2DDMRG(glcm2DDMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLCM2DDMRG features were calculated."));
+		std::string forLog = "GLCM2DDMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	
 	if (glcmFeatures2DMRG == a || config.calculateAllFeatures == 1) {
@@ -310,10 +317,12 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glcm2DMRG.writeCSVFileGLCM2DMRG(glcm2DMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glcm2DMRG.writeOneFileGLCM2DMRG(glcm2DMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glcm2DMRG.writeOneFileGLCM2DMRG(glcm2DMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLCM2DMRG features were calculated."));
+	
+		std::string forLog = "GLCM2DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	
     if (glcmFeat2DVMRG == a || config.calculateAllFeatures == 1){
@@ -322,10 +331,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glcm2DVMRG.writeCSVFileGLCM2DVMRG(glcm2DVMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glcm2DVMRG.writeOneFileGLCM2DVMRG(glcm2DVMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glcm2DVMRG.writeOneFileGLCM2DVMRG(glcm2DVMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLCM2DVMRG features were calculated."));
+		std::string forLog = "GLCM2DVMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
     }
 	
 	if (glcmFeat3DAVG == a || config.calculateAllFeatures == 1) {
@@ -334,10 +344,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glcmFeat3DAVG.writeCSVFileGLCM3DAVG(glcmFeat3DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glcmFeat3DAVG.writeOneFileGLCM3DAVG(glcmFeat3DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glcmFeat3DAVG.writeOneFileGLCM3DAVG(glcmFeat3DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLCM3DAVG features were calculated."));
+		std::string forLog = "GLCM3DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 
     if (glcmFeat3DMRG == a || config.calculateAllFeatures == 1){
@@ -346,10 +357,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glcm3DMRG.writeCSVFileGLCM3DMRG(glcm3DMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glcm3DMRG.writeOneFileGLCM3DMRG(glcm3DMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glcm3DMRG.writeOneFileGLCM3DMRG(glcm3DMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLCM3DMRG features were calculated."));
+		std::string forLog = "GLCM3DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
     }
 	std::cout << "GLCM features are calculated" << std::endl;
 	
@@ -360,10 +372,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glrlm2DAVG.writeCSVFileGLRLM2DAVG(glrlm2DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glrlm2DAVG.writeOneFileGLRLM2DAVG(glrlm2DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glrlm2DAVG.writeOneFileGLRLM2DAVG(glrlm2DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLRLM2DAVG features were calculated."));
+std::string forLog = "GLRLM2DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 
 	if (glrlmFeatures2DDMRG == a || config.calculateAllFeatures == 1) {
@@ -372,10 +385,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glrlm2DDMRG.writeCSVFileGLRLM2DDMRG(glrlm2DDMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glrlm2DDMRG.writeOneFileGLRLM2DDMRG(glrlm2DDMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glrlm2DDMRG.writeOneFileGLRLM2DDMRG(glrlm2DDMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLRLM2DAVG features were calculated."));
+		std::string forLog = "GLRLM2DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 
 
@@ -385,10 +399,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glrlm2DMRG.writeCSVFileGLRLM2DMRG(glrlm2DMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glrlm2DMRG.writeOneFileGLRLM2DMRG(glrlm2DMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glrlm2DMRG.writeOneFileGLRLM2DMRG(glrlm2DMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLRLM2DMRG features were calculated."));
+		std::string forLog = "GLRLM2DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 
     if (glrlmFeatures2DVMRG == a || config.calculateAllFeatures == 1){
@@ -397,10 +412,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glrlm2DVMRG.writeCSVFileGLRLM2DVMRG(glrlm2DVMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glrlm2DVMRG.writeOneFileGLRLM2DVMRG(glrlm2DVMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glrlm2DVMRG.writeOneFileGLRLM2DVMRG(glrlm2DVMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLRLM2DVMRG features were calculated."));
+		std::string forLog = "GLRLM2DVMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
     }
 
 	if (glrlmFeatures3DAVG == a || config.calculateAllFeatures == 1) {
@@ -409,10 +425,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glrlm3DAVG.writeCSVFileGLRLM3DAVG(glrlm3DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glrlm3DAVG.writeOneFileGLRLM3DAVG(glrlm3DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glrlm3DAVG.writeOneFileGLRLM3DAVG(glrlm3DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLRLM3DAVG features were calculated."));
+		std::string forLog = "GLRLM3DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 
     if (glrlmFeatures3DMRG == a || config.calculateAllFeatures == 1){
@@ -421,10 +438,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glrlm3DMRG.writeCSVFileGLRLM3D(glrlm3DMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glrlm3DMRG.writeOneFileGLRLM3D(glrlm3DMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glrlm3DMRG.writeOneFileGLRLM3D(glrlm3DMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLRLM3DMRG features were calculated."));
+		std::string forLog = "GLRLM3DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
     }
 	std::cout << "GLRLM features are calculated" << std::endl;
 
@@ -434,10 +452,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glszm2DAVG.writeCSVFileGLSZM2DAVG(glszm2DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glszm2DAVG.writeOneFileGLSZM2DAVG(glszm2DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glszm2DAVG.writeOneFileGLSZM2DAVG(glszm2DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLSZM2DAVG features were calculated."));
+		std::string forLog = "GLSZM2DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 
 	if (glszmFeatures2DMRG == a || config.calculateAllFeatures == 1) {
@@ -446,10 +465,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glszm2D.writeCSVFileGLSZM(glszm2D, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glszm2D.writeOneFileGLSZM(glszm2D, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glszm2D.writeOneFileGLSZM(glszm2D, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLSZM2DMRG features were calculated."));
+		std::string forLog = "GLSZM2DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	if (glszmFeatures3D == a || config.calculateAllFeatures == 1) {
 		GLSZMFeatures3D<float, 3> glszm3D;
@@ -457,13 +477,15 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			glszm3D.writeCSVFileGLSZM3D(glszm3D, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			glszm3D.writeOneFileGLSZM3D(glszm3D, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			glszm3D.writeOneFileGLSZM3D(glszm3D, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLSZM3D features were calculated."));
+		std::string forLog = "GLSZM3D features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	std::cout << "GLSZM features are calculated" << std::endl;
 	
+
 	boost::multi_array<float, 3> ngtdm2D(boost::extents[imageAttr.imageMatrix.shape()[0]][imageAttr.imageMatrix.shape()[1]][imageAttr.imageMatrix.shape()[2]]);
 	boost::multi_array<float, 3> nrNeighborMatrix(boost::extents[imageAttr.imageMatrix.shape()[0] + 1][imageAttr.imageMatrix.shape()[1]][imageAttr.imageMatrix.shape()[2]]);
 
@@ -471,14 +493,17 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 	//define the NGLDMarices; col.size=9 because we have 8 neighbors
 	boost::multi_array<float, 3> NGLDMatrix(boost::extents[sizeGreyLevels][9][imageAttr.imageMatrix.shape()[2]]);
 	boost::multi_array<float, 3> ngtdm3DMatrix(boost::extents[imageAttr.imageMatrix.shape()[0]][imageAttr.imageMatrix.shape()[1]][imageAttr.imageMatrix.shape()[2]]);
-	boost::multi_array<double, 2> ngldm3DMatrixSum(boost::extents[sizeGreyLevels][27]);
+	boost::multi_array<float, 2> ngldm3DMatrixSum(boost::extents[sizeGreyLevels][27]);
+
 	
 	if (ngtdmFeatures2DAVG == a || config.calculateAllFeatures == 1 || ngtdmFeat2DMRG == a || ngldmFeat2DMRG == a || ngldmFeat2DAVG == a) {
-		getNeighborhoodMatrix2D(imageAttr, ngtdm2D, NGLDMatrix, spacing, config);
+		getNeighborhoodMatrix2D(imageAttr, ngtdm2D, spacing, config);
+		getNeighborhoodMatrix2DNGLDM(imageAttr, NGLDMatrix, spacing, config);
 	}
 
 	if (ngtdmFeatures3D == a || config.calculateAllFeatures == 1 || ngldmFeat3D == a) {
-		getNeighborhoodMatrix3D(imageAttr, ngtdm3DMatrix, ngldm3DMatrixSum, spacing, config);
+		getNeighborhoodMatrix3D_convolution(imageAttr, ngtdm3DMatrix, spacing, config);
+		getNGLDMatrix3D_convolution(imageAttr, ngldm3DMatrixSum, spacing, config);
 	}
 	
 			
@@ -490,10 +515,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			NGTDM2DAVG.writeCSVFileNGTDM2DAVG(NGTDM2DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			NGTDM2DAVG.writeOneFileNGTDM2DAVG(NGTDM2DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			NGTDM2DAVG.writeOneFileNGTDM2DAVG(NGTDM2DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("NGTDM2DAVG features were calculated."));
+		std::string forLog = "NGTDM2DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 
 	if (ngtdmFeat2DMRG == a || config.calculateAllFeatures == 1) {
@@ -502,10 +528,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			ngtdm2DMRG.writeCSVFileNGTDM(ngtdm2DMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			ngtdm2DMRG.writeOneFileNGTDM(ngtdm2DMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			ngtdm2DMRG.writeOneFileNGTDM(ngtdm2DMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("NGTDM2DMRG features were calculated."));
+		std::string forLog = "NGTDM2DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	
 	if (ngtdmFeatures3D == a || config.calculateAllFeatures == 1) {
@@ -514,59 +541,62 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			ngtdm3D.writeCSVFileNGTDM3D(ngtdm3D, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			ngtdm3D.writeOneFileNGTDM3D(ngtdm3D, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			ngtdm3D.writeOneFileNGTDM3D(ngtdm3D, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("NGTDM3D features were calculated."));
+		std::string forLog = "NGTDM3D features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	std::cout << "NGTDM features are calculated" << std::endl;
 	GLDZMFeatures2DAVG<float, 3> gldzm2DAVG;
 	boost::multi_array<float, 3> distanceMap(boost::extents[imageAttr.imageMatrix.shape()[0]][imageAttr.imageMatrix.shape()[1]][imageAttr.imageMatrix.shape()[2]]);
 	if (config.useReSegmentation == 1 || config.excludeOutliers == 1) {
-		gldzm2DAVG.generateDistanceMap(imageAttr.imageMatrixOriginal, distanceMap);
+		gldzm2DAVG.generateDistanceMap(imageAttr.imageMatrixOriginal, imageAttr, distanceMap, config);
 	}
 	else {
-		gldzm2DAVG.generateDistanceMap(imageAttr.imageMatrix, distanceMap);
+		gldzm2DAVG.generateDistanceMap(imageAttr.imageMatrix, imageAttr, distanceMap, config);
 	}
-	
-	
+
+
 	if (gldzmFeatures2DAVG == a || config.calculateAllFeatures == 1) {
-		
+
 		gldzm2DAVG.calculateAllGLDZMFeatures2DAVG(gldzm2DAVG, imageAttr, distanceMap, config);
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			gldzm2DAVG.writeCSVFileGLDZM2DAVG(gldzm2DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			gldzm2DAVG.writeOneFileGLDZM2DAVG(gldzm2DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			gldzm2DAVG.writeOneFileGLDZM2DAVG(gldzm2DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLDZM2DAVG features were calculated."));
+		std::string forLog = "GLDZM2DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
-	
-    if (gldzmFeatures2D == a || config.calculateAllFeatures == 1){
-        GLDZMFeatures2D<float, 3> gldzm2D;
-        gldzm2D.calculateAllGLDZMFeatures2D(gldzm2D, distanceMap, imageAttr, config);
+
+	if (gldzmFeatures2D == a || config.calculateAllFeatures == 1) {
+		GLDZMFeatures2D<float, 3> gldzm2D;
+		gldzm2D.calculateAllGLDZMFeatures2D(gldzm2D, distanceMap, imageAttr, config);
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			gldzm2D.writeCSVFileGLDZM(gldzm2D, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			gldzm2D.writeOneFileGLDZM(gldzm2D, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			gldzm2D.writeOneFileGLDZM(gldzm2D, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLDZM2DMRG features were calculated."));
-    }
-	
-	if (gldzmFeatures3D == a || config.calculateAllFeatures == 1){
-        GLDZMFeatures3D<float, 3> gldzm3D;
-        gldzm3D.calculateAllGLDZMFeatures3D(gldzm3D, distanceMap,  imageAttr, config);
+		std::string forLog = "GLDZM2DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
+	}
+
+	if (gldzmFeatures3D == a || config.calculateAllFeatures == 1) {
+		GLDZMFeatures3D<float, 3> gldzm3D;
+		gldzm3D.calculateAllGLDZMFeatures3D(gldzm3D, distanceMap, imageAttr, config);
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			gldzm3D.writeCSVFileGLDZM3D(gldzm3D, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			gldzm3D.writeOneFileGLDZM3D(gldzm3D, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			gldzm3D.writeOneFileGLDZM3D(gldzm3D, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("GLDZM3D features were calculated."));
-    }
+		std::string forLog = "GLDZM3D features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
+	}
 	std::cout << "GLDZM features are calculated" << std::endl;
-	
 
 	if (ngldmFeat2DAVG == a || config.calculateAllFeatures == 1) {
 		NGLDMFeatures2DAVG<float, 3> ngldm2DAVG;
@@ -574,10 +604,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			ngldm2DAVG.writeCSVFileNGLDM2DAVG(ngldm2DAVG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			ngldm2DAVG.writeOneFileNGLDM2DAVG(ngldm2DAVG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			ngldm2DAVG.writeOneFileNGLDM2DAVG(ngldm2DAVG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("NGLDM2DAVG features were calculated."));
+		std::string forLog = "NGLDM2DAVG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
 	}
 	
     if (ngldmFeat2DMRG==a || config.calculateAllFeatures == 1){
@@ -586,10 +617,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			ngldm2DMRG.writeCSVFileNGLDM2DMRG(ngldm2DMRG, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			ngldm2DMRG.writeOneFileNGLDM2DMRG(ngldm2DMRG, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			ngldm2DMRG.writeOneFileNGLDM2DMRG(ngldm2DMRG, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("NGLDM2DMRG features were calculated."));
+		std::string forLog = "NGLDM2DMRG features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
     }
 	
     if (ngldmFeat3D == a || config.calculateAllFeatures == 1){
@@ -598,10 +630,11 @@ void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> s
 		if (config.csvOutput == 1 && config.getOneCSVFile == 0) {
 			ngldm3D.writeCSVFileNGLDM3D(ngldm3D, config.outputFolder);
 		}
-		else if (config.csvOutput == 1 && config.getOneCSVFile == 1) {
-			ngldm3D.writeOneFileNGLDM3D(ngldm3D, config.outputFolder);
+		else if ((config.csvOutput == 1 && config.getOneCSVFile == 1) || config.ontologyOutput == 1) {
+			ngldm3D.writeOneFileNGLDM3D(ngldm3D, config, config.featureParameterSpaceNr);
 		}
-		writeLogFile(config.outputFolder, string("NGLDM3D features were calculated."));
+		std::string forLog = "NGLDM3D features were calculated.";
+		writeLogFile(config.outputFolder, forLog);
     }
 	std::cout << "NGLDM features are calculated" << std::endl;
 

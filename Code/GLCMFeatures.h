@@ -113,44 +113,45 @@ class GLCMFeatures{
         void getXYDirections(int &directionX, int &directionY, int angle);
 		std::vector<std::pair<T, T> > getNeighbours2D(boost::multi_array<T, R> inputMatrix, int depth, int directionX, int directionY);
 		std::vector<std::pair<T, T> > getNeighbours3D(boost::multi_array<T, R> inputMatrix, int angle, int directionZ);
-        void getDiagonalProbabilities(boost::multi_array<double, 2> &glcMatrix);
-        void getCrossProbabilities(boost::multi_array<double, 2> &glcMatrix);
-		void calculateMeanRowProb(boost::multi_array<double, 2> glcMatrix);
-        void calculateMeanColProb(boost::multi_array<double, 2> glcMatrix);
-        void calculateRowProb(boost::multi_array<double, 2> glcMatrix);
-        void calculateColProb(boost::multi_array<double, 2> glcMatrix);
+        void getDiagonalProbabilities(boost::multi_array<float, 2> &glcMatrix);
+        void getCrossProbabilities(boost::multi_array<float, 2> &glcMatrix);
+		void calculateMeanRowProb(boost::multi_array<float, 2> glcMatrix);
+        void calculateMeanColProb(boost::multi_array<float, 2> glcMatrix);
+        void calculateRowProb(boost::multi_array<float, 2> glcMatrix);
+        void calculateColProb(boost::multi_array<float, 2> glcMatrix);
 
 
-        void calculateJointMaximum(boost::multi_array<double, 2> glcMatrix);
-        void calculateJointAverage(boost::multi_array<double, 2> glcMatrix);
-        void calculateJointVariance(boost::multi_array<double, 2> glcMatrix, T jointAvg);
-        void calculateJointEntropy(boost::multi_array<double, 2> glcMatrix);
+        void calculateJointMaximum(boost::multi_array<float, 2> glcMatrix);
+        void calculateJointAverage(boost::multi_array<float, 2> glcMatrix);
+        void calculateJointVariance(boost::multi_array<float, 2> glcMatrix, T jointAvg);
+        void calculateJointEntropy(boost::multi_array<float, 2> glcMatrix);
         void calculateDiffAverage();
         void calculateDiffVariance(T diffAverage);
         void calculateDiffEntropy();
         void calculateSumAverage();
         void calculateSumVariance(T sumAverage);
         void calculateSumEntropy();
-        void calculateAngSecMoment(boost::multi_array<double, 2> glcMatrix);
-        void calculateContrast(boost::multi_array<double, 2> glcMatrix);
-        void calculateDissimilarity(boost::multi_array<double, 2> glcMatrix);
-        void calculateInverseDiff(boost::multi_array<double, 2> glcMatrix);
-        void calculateInverseDiffNorm(boost::multi_array<double, 2> glcMatrix, T inverseDiff);
-        void calculateInverseDiffMom(boost::multi_array<double, 2> glcMatrix);
-        void calculateInverseDiffMomNorm(boost::multi_array<double, 2> glcMatrix);
-        void calculateInverseVariance(boost::multi_array<double, 2> glcMatrix);
-        void calculateCorrelation(boost::multi_array<double, 2> glcMatrix);
+        void calculateAngSecMoment(boost::multi_array<float, 2> glcMatrix);
+        void calculateContrast(boost::multi_array<float, 2> glcMatrix);
+        void calculateDissimilarity(boost::multi_array<float, 2> glcMatrix);
+        void calculateInverseDiff(boost::multi_array<float, 2> glcMatrix);
+        void calculateInverseDiffNorm(boost::multi_array<float, 2> glcMatrix, T inverseDiff);
+        void calculateInverseDiffMom(boost::multi_array<float, 2> glcMatrix);
+        void calculateInverseDiffMomNorm(boost::multi_array<float, 2> glcMatrix);
+        void calculateInverseVariance(boost::multi_array<float, 2> glcMatrix);
+        void calculateCorrelation(boost::multi_array<float, 2> glcMatrix);
 
 
-        void calculateAutoCorrelation(boost::multi_array<double, 2> glcMatrix);
-        void calculateClusterTendency(boost::multi_array<double, 2> glcMatrix);
-        void calculateClusterShade(boost::multi_array<double, 2> glcMatrix);
-        void calculateClusterProminence(boost::multi_array<double, 2> glcMatrix);
-        void calculateFirstMCorrelation(boost::multi_array<double, 2> glcMatrix);
-        void calculateSecondMCorrelation(boost::multi_array<double, 2> glcMatrix);
+        void calculateAutoCorrelation(boost::multi_array<float, 2> glcMatrix);
+        void calculateClusterTendency(boost::multi_array<float, 2> glcMatrix);
+        void calculateClusterShade(boost::multi_array<float, 2> glcMatrix);
+        void calculateClusterProminence(boost::multi_array<float, 2> glcMatrix);
+        void calculateFirstMCorrelation(boost::multi_array<float, 2> glcMatrix);
+        void calculateSecondMCorrelation(boost::multi_array<float, 2> glcMatrix);
 
         //store the feature values in a csv-file
         void defineGLCMFeatures(vector<string> &features);
+		void defineGLCMFeaturesOntology(vector<string> &features);
 
 };
 
@@ -279,7 +280,7 @@ std::vector<std::pair<T, T> > GLCMFeatures<T, R>::getNeighbours3D(boost::multi_a
 Calculate the mean row probability
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateMeanRowProb(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateMeanRowProb(boost::multi_array<float, 2> glcMatrix){
     calculateRowProb(glcMatrix);
     meanRowProb = 0;
 	stdRowProb = 0;
@@ -300,7 +301,7 @@ void GLCMFeatures<T,R>::calculateMeanRowProb(boost::multi_array<double, 2> glcMa
 Calculate the mean column probability
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateMeanColProb(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateMeanColProb(boost::multi_array<float, 2> glcMatrix){
     calculateColProb(glcMatrix);
     meanColProb = 0;
     for(int k = 0; k < N_g; k++){
@@ -323,7 +324,7 @@ Calculate the diagonal probabilities and store them in vector diagonalProbabilit
 formula see above
 */
 template <class T, size_t R>
-void GLCMFeatures<T, R>::getDiagonalProbabilities(boost::multi_array<double, 2> &glcMatrix){
+void GLCMFeatures<T, R>::getDiagonalProbabilities(boost::multi_array<float, 2> &glcMatrix){
 
     T diagProbability;
     diagonalProbabilities.clear();
@@ -352,7 +353,7 @@ Calculate the sum of the row probabilities and store them in vector sumProbRows
 formula see above
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateRowProb(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateRowProb(boost::multi_array<float, 2> glcMatrix){
     T rowProb;
     sumProbRows.clear();
     for(int i = 0; i < N_g; i++ ){
@@ -373,7 +374,7 @@ Calculate the sum of the col probabilities and store them in vector sumProbCOls
 formula see above
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateColProb(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateColProb(boost::multi_array<float, 2> glcMatrix){
     T colProb;
     sumProbCols.clear();
     for(int j = 0; j < N_g; j++ ){
@@ -393,7 +394,7 @@ void GLCMFeatures<T,R>::calculateColProb(boost::multi_array<double, 2> glcMatrix
 Calculate the cross probabilities and store them in vector crossProbabilities
 */
 template <class T, size_t R>
-void GLCMFeatures<T, R>::getCrossProbabilities(boost::multi_array<double, 2> &glcMatrix){
+void GLCMFeatures<T, R>::getCrossProbabilities(boost::multi_array<float, 2> &glcMatrix){
     T crossProbability;
     crossProbabilities.clear();
     for(int k =0; k < 2*N_g; k++){
@@ -417,7 +418,7 @@ void GLCMFeatures<T, R>::getCrossProbabilities(boost::multi_array<double, 2> &gl
 The joint maximum is the probability belonging to the neighbor pair which occurs the most in the VOI
 */
 template <class T, size_t R>
-void GLCMFeatures<T, R>::calculateJointMaximum(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T, R>::calculateJointMaximum(boost::multi_array<float, 2> glcMatrix){
     N_g = glcMatrix.shape()[0];
     jointMaximum = *max_element( glcMatrix.origin(), glcMatrix.origin() + glcMatrix.num_elements());
 }
@@ -428,7 +429,7 @@ The joint average is the sum of joint probabilities. This sum is weighted by the
 probabilities.
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateJointAverage(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateJointAverage(boost::multi_array<float, 2> glcMatrix){
     jointAverage = 0;
     for(int row = 0; row < N_g; row++){
         for(int col = 0; col < N_g; col++){
@@ -446,7 +447,7 @@ Calculates the joint variance using the joint average defined before \n
 The joint variance is the variance of the numbers of neighbor pairs
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateJointVariance(boost::multi_array<double, 2> glcMatrix, T jointAvg){
+void GLCMFeatures<T,R>::calculateJointVariance(boost::multi_array<float, 2> glcMatrix, T jointAvg){
     jointVariance = 0;
     for(int row = 0; row < N_g; row++){
         for(int col = 0; col < N_g; col++){
@@ -463,9 +464,9 @@ Calculates the joint entropy \n
 The joint entropy is a measurement for the uncertainity of numbers of neighbor pairs
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateJointEntropy(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateJointEntropy(boost::multi_array<float, 2> glcMatrix){
     jointEntropy = 0;
-    double actElement;
+    float actElement;
     for(int i = 0; i < N_g; i++){
         for(int j = 0; j < N_g; j++){
             actElement = glcMatrix[i][j];
@@ -515,7 +516,7 @@ The different entropy feature gives information about the variablity in the diff
 template <class T, size_t R>
 void GLCMFeatures<T,R>::calculateDiffEntropy(){
     diffEntropy = 0;
-    double actElement = 0;
+    float actElement = 0;
     for(int k = 0; k < diagonalProbabilities.size(); k++){
         actElement = diagonalProbabilities[k];
         if(actElement != 0){
@@ -561,7 +562,7 @@ The sum entropy is a measurement of the differences in the intensity value pairs
 template <class T, size_t R>
 void GLCMFeatures<T,R>::calculateSumEntropy(){
     sumEntropy = 0;
-    double actElement = 0;
+    float actElement = 0;
     for(int k = 0; k < crossProbabilities.size(); k++){
         actElement = crossProbabilities[k];
         if(actElement != 0 && !std::isnan(actElement)){
@@ -577,7 +578,7 @@ void GLCMFeatures<T,R>::calculateSumEntropy(){
 The angular second moment is the same as the energy of the probability distribution
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateAngSecMoment(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateAngSecMoment(boost::multi_array<float, 2> glcMatrix){
     angSecMoment = for_each(glcMatrix.origin(), glcMatrix.origin() + glcMatrix.num_elements(), square_accumulate<float>()).result();
 }
 
@@ -591,7 +592,7 @@ The contrast is a weighted sum of the elements of the GLC-matrix. The bigger the
 the higher the weight
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateContrast(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateContrast(boost::multi_array<float, 2> glcMatrix){
     contrast = 0;
     for(int i = 0; i < N_g; i++){
         for(int j = 0; j < N_g; j++){
@@ -609,7 +610,7 @@ The calculation of the dissimilarity is similar to the calculation of the contra
 It represents the mean difference of the intensity values between neighboring pixels/voxels
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateDissimilarity(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateDissimilarity(boost::multi_array<float, 2> glcMatrix){
     dissimilarity = 0;
     for(int i = 0; i < N_g; i++){
         for(int j = 0; j < N_g; j++){
@@ -629,7 +630,7 @@ The more equal the neighbor pairs are, the lower is the denominator and the high
 
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateInverseDiff(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateInverseDiff(boost::multi_array<float, 2> glcMatrix){
     inverseDiff = 0;
     for(int i = 0; i < N_g; i++){
         for(int j = 0; j < N_g; j++){
@@ -647,11 +648,11 @@ The calculation of the inverse difference norm is similar to the inverse differe
 The difference of the intensity differences is here normalised by the number of different grey levels \n
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateInverseDiffNorm(boost::multi_array<double, 2> glcMatrix, T inverseDiff){
+void GLCMFeatures<T,R>::calculateInverseDiffNorm(boost::multi_array<float, 2> glcMatrix, T inverseDiff){
     inverseDiffNorm = 0;
     for(int i = 0; i < N_g; i++){
         for(int j = 0; j < N_g; j++){
-            inverseDiffNorm += glcMatrix[i][j]/(1+double(abs(i-j))/double(N_g));
+            inverseDiffNorm += glcMatrix[i][j]/(1+float(abs(i-j))/float(N_g));
 
         }
     }
@@ -666,7 +667,7 @@ It is also a weighted sum of the elements of the GLC-matrix. The higher the inte
 pair differ, the smaller is the weight.
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateInverseDiffMom(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateInverseDiffMom(boost::multi_array<float, 2> glcMatrix){
     inverseDiffMom = 0;
     for(int i = 0; i < N_g; i++){
         for(int j = 0; j < N_g; j++){
@@ -685,7 +686,7 @@ The calculation of the inverse difference moment norm is similar to the one of i
 Here the difference of the intensities of neighbor pairs is normalised by the number of grey levels
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateInverseDiffMomNorm(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateInverseDiffMomNorm(boost::multi_array<float, 2> glcMatrix){
     inverseDiffMomNorm = 0;
     for(int i = 0; i < N_g; i++){
         for(int j = 0; j < N_g;j++){
@@ -702,7 +703,7 @@ void GLCMFeatures<T,R>::calculateInverseDiffMomNorm(boost::multi_array<double, 2
 The inverse variance is another measure if the image is locally homogen or not.
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateInverseVariance(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateInverseVariance(boost::multi_array<float, 2> glcMatrix){
     inverseVar = 0;
     for(int i = 0; i < N_g;  i++){
         for(int j = i + 1; j < N_g; j++){
@@ -718,7 +719,7 @@ void GLCMFeatures<T,R>::calculateInverseVariance(boost::multi_array<double, 2> g
 The correlation shows the correlation between different grey values
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateCorrelation(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateCorrelation(boost::multi_array<float, 2> glcMatrix){
     calculateMeanColProb(glcMatrix);
     calculateMeanRowProb(glcMatrix);
     correlation = 0;
@@ -739,7 +740,7 @@ void GLCMFeatures<T,R>::calculateCorrelation(boost::multi_array<double, 2> glcMa
 AUto correlation measures the fineness or coarseness of the VOI.
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateAutoCorrelation(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateAutoCorrelation(boost::multi_array<float, 2> glcMatrix){
     autoCorrelation = 0;
     for(int row = 1; row < N_g + 1; row++){
         for(int col = 1; col < N_g + 1; col++){
@@ -757,7 +758,7 @@ void GLCMFeatures<T,R>::calculateAutoCorrelation(boost::multi_array<double, 2> g
 The cluster tendency gives information about the formation of voxels with similar grey values in groups
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateClusterTendency(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateClusterTendency(boost::multi_array<float, 2> glcMatrix){
     clusterTendency = 0;
     for(int i = 0; i < N_g; i++ ){
         for(int j = 0; j < N_g; j++){
@@ -773,7 +774,7 @@ void GLCMFeatures<T,R>::calculateClusterTendency(boost::multi_array<double, 2> g
 The cluster shade measures the skewness and asymmetry of the VOI
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateClusterShade(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateClusterShade(boost::multi_array<float, 2> glcMatrix){
     clusterShade = 0;
     for(int i = 0; i < N_g; i++ ){
         for(int j = 0; j < N_g; j++){
@@ -790,7 +791,7 @@ void GLCMFeatures<T,R>::calculateClusterShade(boost::multi_array<double, 2> glcM
 The cluster prominence gives also information about the skewness and asymmetry of the VOI (higher value: more assymetry)
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateClusterProminence(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateClusterProminence(boost::multi_array<float, 2> glcMatrix){
     clusterProminence = 0;
     for(int i = 0; i < N_g; i++ ){
         for(int j = 0; j < N_g; j++){
@@ -806,12 +807,12 @@ void GLCMFeatures<T,R>::calculateClusterProminence(boost::multi_array<double, 2>
 The first moment of correlation measures as well the homogeneity
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateFirstMCorrelation(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateFirstMCorrelation(boost::multi_array<float, 2> glcMatrix){
     HXY = 0;
     HX = 0;
     HXY1 = 0;
-    double actualProbRows = 0;
-    double actualProbCols = 0;
+    float actualProbRows = 0;
+    float actualProbCols = 0;
     for(int i = 0; i < N_g; i++ ){
         actualProbRows = sumProbRows[i];
         if(actualProbRows != 0){
@@ -837,7 +838,7 @@ void GLCMFeatures<T,R>::calculateFirstMCorrelation(boost::multi_array<double, 2>
 The second moment of correlation measures the similarity in intensity values for neighbor pairs
 */
 template <class T, size_t R>
-void GLCMFeatures<T,R>::calculateSecondMCorrelation(boost::multi_array<double, 2> glcMatrix){
+void GLCMFeatures<T,R>::calculateSecondMCorrelation(boost::multi_array<float, 2> glcMatrix){
     HXY2 = 0;
     for(int i = 0; i < N_g; i++ ){
       for(int j = 0; j < N_g; j++){
@@ -877,6 +878,35 @@ void GLCMFeatures<T, R>::defineGLCMFeatures(vector<string> &features){
     features.push_back("cluster prominence");
     features.push_back("first measure of information correlation");
     features.push_back("second measure of information correlation");
+}
+
+template <class T, size_t R>
+void GLCMFeatures<T, R>::defineGLCMFeaturesOntology(vector<string> &features) {
+	features.push_back("Fcm.joint.max");
+	features.push_back("Fcm.joint.avg");
+	features.push_back("Fcm.joint.var");
+	features.push_back("Fcm.joint.entr");
+	features.push_back("Fcm.diff.avg");
+	features.push_back("Fcm.diff.var");
+	features.push_back("Fcm.diff.entr");
+	features.push_back("Fcm.sum.avg");
+	features.push_back("Fcm.sum.var");
+	features.push_back("Fcm.sum.entr");
+	features.push_back("Fcm.energy");
+	features.push_back("Fcm.contrast");
+	features.push_back("Fcm.dissimilarity");
+	features.push_back("Fcm.inv.diff");
+	features.push_back("Fcm.inv.diff.norm");
+	features.push_back("Fcm.inv.diff.mom");
+	features.push_back("Fcm.inv.diff.mom.norm");
+	features.push_back("Fcm.inv.var");
+	features.push_back("Fcm.corr");
+	features.push_back("Fcm.auto.corr");
+	features.push_back("Fcm.clust.tend");
+	features.push_back("Fcm.clust.shade");
+	features.push_back("Fcm.clust.prom");
+	features.push_back("Fcm.info.corr.1");
+	features.push_back("Fcm.info.corr.2");
 }
 
 

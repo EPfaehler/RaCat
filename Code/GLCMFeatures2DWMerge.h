@@ -18,13 +18,13 @@ class GLCMFeatures2DWMerge : GLCMFeatures<T,R>  {
      private:
 
         string normGLCM;
-        vector<double> actualSpacing;
+        vector<float> actualSpacing;
         GLCMFeatures<T, R> glcmComb;
 
         void extractGLCMDataWMerge(vector<T> &glcmData, GLCMFeatures2DWMerge<T, R> glcmFeatures);
-        void fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int depth, int angle);
+        void fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int depth, int angle);
         std::vector<std::pair<T, T> > getNeighbours2D(boost::multi_array<T, R> inputMatrix, int depth, int directionX, int directionY);
-        boost::multi_array<double, 2> calculateMatrix2DWMerge( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity);
+        boost::multi_array<float, 2> calculateMatrix2DWMerge( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity);
 
         vector<T> diagonalProbabilities;
         vector<T> crossProbabilities;
@@ -40,7 +40,7 @@ class GLCMFeatures2DWMerge : GLCMFeatures<T,R>  {
 		}
 		~GLCMFeatures2DWMerge() {
 		}
-        void calculateAllGLCMFeatures2DWMerge(GLCMFeatures2DWMerge<T,R> &glcmFeat, boost::multi_array<T,R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config);
+        void calculateAllGLCMFeatures2DWMerge(GLCMFeatures2DWMerge<T,R> &glcmFeat, boost::multi_array<T,R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config);
         void writeCSVFileGLCM2DWMerge(GLCMFeatures2DWMerge<T,R> glcmFeat, string outputFolder);
 		void writeOneFileGLCM2DWMerge(GLCMFeatures2DWMerge<T, R> glcmFeat, string outputFolder);
 };
@@ -54,8 +54,8 @@ for the occurence of every neighbor pair.
 @param[out]: GLCM-matrix
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLCMFeatures2DWMerge<T,R>::calculateMatrix2DWMerge( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity){
-    typedef boost::multi_array<double, 2> glcmat;
+boost::multi_array<float, 2> GLCMFeatures2DWMerge<T,R>::calculateMatrix2DWMerge( boost::multi_array<T, R> inputMatrix, int depth, float maxIntensity){
+    typedef boost::multi_array<float, 2> glcmat;
     int sizeMatrix = maxIntensity;
     int ang;
     glcmat sum(boost::extents[sizeMatrix][sizeMatrix]);
@@ -96,7 +96,7 @@ As next step, the GLCMatrix is filled: for every neighborpair the position in th
 the value on this position of the GLCMatrix is increased +1
 */
 template <class T, size_t R>
-void GLCMFeatures2DWMerge<T, R>::fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int depth, int angle){
+void GLCMFeatures2DWMerge<T, R>::fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int depth, int angle){
     //vector in which all neihbor pairs are stored
     std::vector<std::pair<T, T> > neighbours;
     float weight;
@@ -158,7 +158,7 @@ std::vector<std::pair<T, T> > GLCMFeatures2DWMerge<T, R>::getNeighbours2D(boost:
 
 
 template <class T, size_t R>
-void GLCMFeatures2DWMerge<T, R>::calculateAllGLCMFeatures2DWMerge(GLCMFeatures2DWMerge<T,R> &glcmFeatures, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config){
+void GLCMFeatures2DWMerge<T, R>::calculateAllGLCMFeatures2DWMerge(GLCMFeatures2DWMerge<T,R> &glcmFeatures, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config){
 
     //get which norm should be used in the calculation of the GLCM features
     normGLCM = config.normGLCM;
@@ -193,7 +193,7 @@ void GLCMFeatures2DWMerge<T, R>::calculateAllGLCMFeatures2DWMerge(GLCMFeatures2D
 
 
     for(int depth = 0; depth < totalDepth; depth++){
-          boost::multi_array<double,2> GLCM180= glcmFeatures.calculateMatrix2DWMerge(inputMatrix, depth, maxIntensity);
+          boost::multi_array<float,2> GLCM180= glcmFeatures.calculateMatrix2DWMerge(inputMatrix, depth, maxIntensity);
           glcmFeatures.calculateJointMaximum(GLCM180);
           sumJointMaximum += this->jointMaximum;
           glcmFeatures.calculateJointAverage(GLCM180);

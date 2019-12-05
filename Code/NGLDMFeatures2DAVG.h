@@ -17,17 +17,17 @@ class NGLDMFeatures2DAVG : public NGLDMFeatures2DMRG<T,R>{
 
 		vector<T> sumProbRows;
 		vector<T> sumProbCols;
-		vector<double> rowSums;
-		vector<double> colSums;
+		vector<float> rowSums;
+		vector<float> colSums;
 
         NGLDMFeatures2DMRG<T, R> ngldm;
         void extractNGLDMData2DAVG(vector<T> &ngldmData, NGLDMFeatures2DAVG<T, R> ngldmFeatures);
-        boost::multi_array<double, 2> getMatrix(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> ngldmNr, int depth);
+        boost::multi_array<float, 2> getMatrix(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> ngldmNr, int depth);
 
     public:
         //double dependenceCountEnergy;
         void writeCSVFileNGLDM2DAVG(NGLDMFeatures2DAVG<T,R> ngldmFeat, string outputFolder);
-		void writeOneFileNGLDM2DAVG(NGLDMFeatures2DAVG<T, R> ngldmFeat, string outputFolder);
+		void writeOneFileNGLDM2DAVG(NGLDMFeatures2DAVG<T, R> ngldmFeat, ConfigFile config, int &parameterSpaceNr);
         void calculateAllNGLDMFeatures2DAVG(NGLDMFeatures2DAVG<T, R> &ngldmFeatures, Image<T, R> imageAttr, boost::multi_array<T, R> ngldmMatrix, ConfigFile config);
 
 };
@@ -42,8 +42,8 @@ class NGLDMFeatures2DAVG : public NGLDMFeatures2DMRG<T,R>{
 This function converts the 3D NGLDM matrix in the required 2D NGLD matrix for every slice
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> NGLDMFeatures2DAVG<T, R>::getMatrix(boost::multi_array<T,R> inputMatrix, boost::multi_array<T, R> ngldmNr, int depth){
-    typedef boost::multi_array<double, 2>  ngldmat;
+boost::multi_array<float, 2> NGLDMFeatures2DAVG<T, R>::getMatrix(boost::multi_array<T,R> inputMatrix, boost::multi_array<T, R> ngldmNr, int depth){
+    typedef boost::multi_array<float, 2>  ngldmat;
     vector<int> actualIndex;
     T actualElement;
     int sizeGreyLevels = (this->diffGreyLevels).size();
@@ -72,9 +72,9 @@ void NGLDMFeatures2DAVG<T, R>::calculateAllNGLDMFeatures2DAVG(NGLDMFeatures2DAVG
 
     int totalDepth = imageAttr.imageMatrix.shape()[2];
 
-    double meanRun;
-	double meanGrey;
-    double totalSum;
+	float meanRun;
+	float meanGrey;
+	float totalSum;
 
     T sumShortRunEmphasis = 0;
     T sumLongRunEmphasis = 0;
@@ -96,10 +96,10 @@ void NGLDMFeatures2DAVG<T, R>::calculateAllNGLDMFeatures2DAVG(NGLDMFeatures2DAVG
 
     for(int depth = 0; depth < totalDepth; depth++){
 
-        boost::multi_array<double,2> NGLDM=ngldmFeatures.getMatrix(imageAttr.imageMatrix, ngldmMatrix, depth);
+        boost::multi_array<float,2> NGLDM=ngldmFeatures.getMatrix(imageAttr.imageMatrix, ngldmMatrix, depth);
         totalSum = ngldmFeatures.calculateTotalSum(NGLDM);
 
-        boost::multi_array<double,2> probMatrix = ngldmFeatures.calculateProbMatrix(NGLDM, totalSum);
+        boost::multi_array<float,2> probMatrix = ngldmFeatures.calculateProbMatrix(NGLDM, totalSum);
 
         meanGrey = ngldmFeatures.calculateMeanProbGrey(probMatrix);
         meanRun = ngldmFeatures.calculateMeanProbRun(probMatrix);
@@ -207,8 +207,14 @@ void NGLDMFeatures2DAVG<T, R>::writeCSVFileNGLDM2DAVG(NGLDMFeatures2DAVG<T,R> ng
 }
 
 template <class T, size_t R>
-void NGLDMFeatures2DAVG<T, R>::writeOneFileNGLDM2DAVG(NGLDMFeatures2DAVG<T, R> ngldmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void NGLDMFeatures2DAVG<T, R>::writeOneFileNGLDM2DAVG(NGLDMFeatures2DAVG<T, R> ngldmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -216,14 +222,40 @@ void NGLDMFeatures2DAVG<T, R>::writeOneFileNGLDM2DAVG(NGLDMFeatures2DAVG<T, R> n
 	ofstream ngldmCSV;
 	ngldmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	ngldm.defineNGLDMFeatures(features);
+	
 
 	vector<T> ngldmData;
 	extractNGLDMData2DAVG(ngldmData, ngldmFeat);
-	for (int i = 0; i< ngldmData.size(); i++) {
-		ngldmCSV << "ngldmFeatures2Davg" << "," << features[i] << ",";
-		ngldmCSV << ngldmData[i];
-		ngldmCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		ngldm.defineNGLDMFeatures(features);
+		for (int i = 0; i < ngldmData.size(); i++) {
+			ngldmCSV << "ngldmFeatures2Davg" << "," << features[i] << ",";
+			ngldmCSV << ngldmData[i];
+			ngldmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		features.clear();
+		ngldm.defineNGLDMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "2Davg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < ngldmData.size(); i++) {
+			ngldmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			ngldmCSV << ngldmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			ngldmCSV << "\n";
+		}
+
 	}
 	ngldmCSV.close();
 

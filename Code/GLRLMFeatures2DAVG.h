@@ -18,16 +18,16 @@ private:
 	GLRLMFeatures<T, R> glrlm;
 	GLRLMFeatures2DVMRG<T, R> glrlm2DFullMerge;
 
-	double totalSum;
+	float totalSum;
 
-	typedef boost::multi_array<double, 2> glrlmMat;
+	typedef boost::multi_array<float, 2> glrlmMat;
 
 	int directionX;
 	int directionY;
 
 	int maxRunLength;
 
-	boost::multi_array<double, 2> createGLRLMatrixAVG(boost::multi_array<T, R> inputMatrix, int depth, int ang);
+	boost::multi_array<float, 2> createGLRLMatrixAVG(boost::multi_array<T, R> inputMatrix, int depth, int ang);
 	void extractGLRLMDataAVG(vector<T> &glrlmData, GLRLMFeatures2DAVG<T, R> glrlmFeatures);
 
 public:
@@ -35,11 +35,11 @@ public:
 	}
 	~GLRLMFeatures2DAVG() {
 	}
-	void fill2DMatrices2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, vector<float> diffGreyLevels, int depth, int ang);
+	void fill2DMatrices2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, vector<float> diffGreyLevels, int depth, int ang);
 
 	void calculateAllGLRLMFeatures2DAVG(GLRLMFeatures2DAVG<T, R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffFGrey, ConfigFile config);
 	void writeCSVFileGLRLM2DAVG(GLRLMFeatures2DAVG<T, R> glrlmFeat, string outputFolder);
-	void writeOneFileGLRLM2DAVG(GLRLMFeatures2DAVG<T, R> glrlmFeat, string outputFolder);
+	void writeOneFileGLRLM2DAVG(GLRLMFeatures2DAVG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr);
 
 };
 
@@ -51,7 +51,7 @@ In the method createGLRLMatrixW=Merge the GLRLM-matrix for given slice is calcul
 @param[out]: GLCM-matrix
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLRLMFeatures2DAVG<T, R>::createGLRLMatrixAVG(boost::multi_array<T, R> inputMatrix, int depth, int ang) {
+boost::multi_array<float, 2> GLRLMFeatures2DAVG<T, R>::createGLRLMatrixAVG(boost::multi_array<T, R> inputMatrix, int depth, int ang) {
 	int sizeMatrix = this->diffGreyLevels.size();
 	glrlmMat GLRLMatrix(boost::extents[sizeMatrix][this->maxRunLength]);
 	fill2DMatrices2DAVG(inputMatrix, GLRLMatrix, this->diffGreyLevels, depth, ang);
@@ -71,7 +71,7 @@ In the method fill2DMatrices2DWOMerge the matrix is filled for the given image s
 The function works analog to the function in GLRLMFeatures2DFullMerge
 */
 template <class T, size_t R>
-void GLRLMFeatures2DAVG<T, R>::fill2DMatrices2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, vector<float> diffGreyLevels, int depth, int ang) {
+void GLRLMFeatures2DAVG<T, R>::fill2DMatrices2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, vector<float> diffGreyLevels, int depth, int ang) {
 
 	T actGreyLevel = 0;
 	T actElement = 0;
@@ -146,13 +146,13 @@ void GLRLMFeatures2DAVG<T, R>::calculateAllGLRLMFeatures2DAVG(GLRLMFeatures2DAVG
 	T sumRunLengthVar = 0;
 	T sumRunEntropy = 0;
 
-	vector<double> rowSums;
-	vector<double> colSums;
+	vector<float> rowSums;
+	vector<float> colSums;
 
 
 
-	double meanGrey;
-	double meanRun;
+	float meanGrey;
+	float meanRun;
 
 	int totalDepth = inputMatrix.shape()[2];
 
@@ -163,13 +163,13 @@ void GLRLMFeatures2DAVG<T, R>::calculateAllGLRLMFeatures2DAVG(GLRLMFeatures2DAVG
 
 		for (int i = 0; i < 4; i++) {
 			ang = 180 - i * 45;
-			boost::multi_array<double, 2> glrlMatrix = createGLRLMatrixAVG(inputMatrix, depth, ang);
+			boost::multi_array<float, 2> glrlMatrix = createGLRLMatrixAVG(inputMatrix, depth, ang);
 
 			totalSum = glrlmFeatures.calculateTotalSum(glrlMatrix);
 			rowSums = glrlmFeatures.calculateRowSums(glrlMatrix);
 			colSums = glrlmFeatures.calculateColSums(glrlMatrix);
 
-			boost::multi_array<double, 2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
+			boost::multi_array<float, 2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
 			meanGrey = glrlmFeatures.calculateMeanProbGrey(probMatrix);
 			meanRun = glrlmFeatures.calculateMeanProbRun(probMatrix);
 
@@ -260,8 +260,14 @@ void GLRLMFeatures2DAVG<T, R>::writeCSVFileGLRLM2DAVG(GLRLMFeatures2DAVG<T, R> g
 }
 
 template <class T, size_t R>
-void GLRLMFeatures2DAVG<T, R>::writeOneFileGLRLM2DAVG(GLRLMFeatures2DAVG<T, R> glrlmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLRLMFeatures2DAVG<T, R>::writeOneFileGLRLM2DAVG(GLRLMFeatures2DAVG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -269,14 +275,38 @@ void GLRLMFeatures2DAVG<T, R>::writeOneFileGLRLM2DAVG(GLRLMFeatures2DAVG<T, R> g
 	ofstream glrlmCSV;
 	glrlmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	glrlm.defineGLRLMFeatures(features);
-
+	
 	vector<T> glrlmData;
 	extractGLRLMDataAVG(glrlmData, glrlmFeat);
-	for (int i = 0; i< glrlmData.size(); i++) {
-		glrlmCSV << "GLRLMFeatures2Davg" << "," << features[i] << ",";
-		glrlmCSV << glrlmData[i];
-		glrlmCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		glrlm.defineGLRLMFeatures(features);
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << "GLRLMFeatures2Davg" << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i];
+			glrlmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glrlm.defineGLRLMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		featSpaceTable << parameterSpaceName << "," << "2DAVG" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glrlmCSV << "\n";
+		}
+
 	}
 	glrlmCSV.close();
 }

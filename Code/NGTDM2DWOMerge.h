@@ -22,7 +22,7 @@ class NGTDM2DWOMerge : NGTDMFeatures<T,R>{
     private:
         NGTDMFeatures<T, R> ngtdm;
 		//these are the values to determine if the user wants to calculate novel/uncommon features
-		vector<double> actualSpacing;
+		vector<float> actualSpacing;
 		string normNGTDM;
 		//distance of neighborhood defined by the user
 		int dist;
@@ -31,10 +31,10 @@ class NGTDM2DWOMerge : NGTDMFeatures<T,R>{
 
         T getNeighborhood(boost::multi_array<T,R> inputMatrix, int *indexOfElement);
 
-        boost::multi_array<double, 2> getNGTDMatrix2DWOMerge(boost::multi_array<T,R> inputMatrix, int depth);
+        boost::multi_array<float, 2> getNGTDMatrix2DWOMerge(boost::multi_array<T,R> inputMatrix, int depth);
     public:
-        void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix);
-        void calculateAllNGTDMFeatures2DWOMerge(NGTDM2DWOMerge<T,R> &ngtdm, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<double> spacing, ConfigFile config);
+        void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix);
+        void calculateAllNGTDMFeatures2DWOMerge(NGTDM2DWOMerge<T,R> &ngtdm, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<float> spacing, ConfigFile config);
         void writeCSVFileNGTDM2DWOMerge(NGTDM2DWOMerge<T, R> ngtdm, string outputFolder);
 		void writeOneFileNGTDM2DWOMerge(NGTDM2DWOMerge<T, R> ngtdm, string outputFolder);
 };
@@ -49,8 +49,8 @@ In this function the NGTDM is filled.
 The function fills the NGTDMatrix with the corresponding values
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> NGTDM2DWOMerge<T, R>::getNGTDMatrix2DWOMerge(boost::multi_array<T,R> inputMatrix, int depth){
-    typedef boost::multi_array<double, 2>  ngtdmat;
+boost::multi_array<float, 2> NGTDM2DWOMerge<T, R>::getNGTDMatrix2DWOMerge(boost::multi_array<T,R> inputMatrix, int depth){
+    typedef boost::multi_array<float, 2>  ngtdmat;
     int sizeMatrix= this->diffGreyLevels.size();
     ngtdmat NGTDMatrix(boost::extents[sizeMatrix][3]);
     int indexOfElement[3]={0,0,0};
@@ -128,8 +128,8 @@ T NGTDM2DWOMerge<T, R>::getNeighborhood(boost::multi_array<T,R> inputMatrix, int
 The function calculates the probability matrix of the NGTD matrix, as many features are calculated using the probabilities.
 */
 template <class T, size_t R>
-void NGTDM2DWOMerge<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix){
-    double numItem = 0;
+void NGTDM2DWOMerge<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix){
+    float numItem = 0;
     for(int actElementIndex =0; actElementIndex<boost::size(this->diffGreyLevels); actElementIndex++){
         numItem += ngtdMatrix[actElementIndex][0];
     }
@@ -143,22 +143,22 @@ void NGTDM2DWOMerge<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood,
 
 
 template <class T, size_t R>
-void NGTDM2DWOMerge<T, R>::calculateAllNGTDMFeatures2DWOMerge(NGTDM2DWOMerge<T,R> &ngtdmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<double> spacing, ConfigFile config){
+void NGTDM2DWOMerge<T, R>::calculateAllNGTDMFeatures2DWOMerge(NGTDM2DWOMerge<T,R> &ngtdmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<float> spacing, ConfigFile config){
 	this->diffGreyLevels = diffGrey;
 	//fill these values with the values set by user
 	actualSpacing = spacing;
 	normNGTDM = config.normNGTDM;
 	dist = config.dist;
 
-    double sumCoarseness = 0;
-    double sumContrast = 0;
-    double sumBusyness = 0;
-    double sumComplexity = 0;
-    double sumStrength = 0;
+    float sumCoarseness = 0;
+    float sumContrast = 0;
+    float sumBusyness = 0;
+    float sumComplexity = 0;
+    float sumStrength = 0;
 
     int totalDepth = inputMatrix.shape()[2];
     for(int depth = 0; depth < totalDepth; depth++){
-       boost::multi_array<double, 2> ngtdm = ngtdmFeatures.getNGTDMatrix2DWOMerge(inputMatrix, depth);
+       boost::multi_array<float, 2> ngtdm = ngtdmFeatures.getNGTDMatrix2DWOMerge(inputMatrix, depth);
         ngtdmFeatures.calculateCoarseness(ngtdm);
         sumCoarseness += this->coarseness;
         ngtdmFeatures.calculateContrast(ngtdm);

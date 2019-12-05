@@ -19,28 +19,28 @@ private:
 	GLRLMFeatures<T, R> glrlm;
 	GLRLMFeatures2DVMRG<T, R> glrlm2DFullMerge;
 
-	double totalSum;
-
-	typedef boost::multi_array<double, 2> glrlmMat;
+	float totalSum;
+	float runPercentage;
+	typedef boost::multi_array<float, 2> glrlmMat;
 
 	int directionX;
 	int directionY;
 
 	int maxRunLength;
 	string normGLRLM;
-	vector<double> actualSpacing;
-	boost::multi_array<double, 2> createGLRLMatrix2DDMRG(boost::multi_array<T, R> inputMatrix, int ang);
+	vector<float> actualSpacing;
+	boost::multi_array<float, 2> createGLRLMatrix2DDMRG(boost::multi_array<T, R> inputMatrix, int ang);
 	void extractGLRLMData2DDMRG(vector<T> &glrlmData, GLRLMFEATURES2DDMRG<T, R> glrlmFeatures);
-	void fill2DMatrices2DDMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, int depth, int ang);
-	void calculateRunPercentage2DDMRG(boost::multi_array<T, R> inputMatrix, int depth, double totalSum, int nrNeighbor);
+	void fill2DMatrices2DDMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, int depth, int ang);
+	void calculateRunPercentage2DDMRG(boost::multi_array<T, R> inputMatrix, int depth, float totalSum, int nrNeighbor);
 public:
 	GLRLMFEATURES2DDMRG() {
 	}
 	~GLRLMFEATURES2DDMRG() {
 	}
-	void calculateAllGLRLMFeatures2DDMRG(GLRLMFEATURES2DDMRG<T, R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffFGrey, vector<double> spacing, ConfigFile config);
+	void calculateAllGLRLMFeatures2DDMRG(GLRLMFEATURES2DDMRG<T, R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffFGrey, vector<float> spacing, ConfigFile config);
 	void writeCSVFileGLRLM2DDMRG(GLRLMFEATURES2DDMRG<T, R> glrlmFeat, string outputFolder);
-	void writeOneFileGLRLM2DDMRG(GLRLMFEATURES2DDMRG<T, R> glrlmFeat, string outputFolder);
+	void writeOneFileGLRLM2DDMRG(GLRLMFEATURES2DDMRG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr);
 
 };
 
@@ -52,7 +52,7 @@ In the method createGLRLMatrixW=Merge the GLRLM-matrix for given slice is calcul
 @param[out]: GLCM-matrix
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLRLMFEATURES2DDMRG<T, R>::createGLRLMatrix2DDMRG(boost::multi_array<T, R> inputMatrix, int ang) {
+boost::multi_array<float, 2> GLRLMFEATURES2DDMRG<T, R>::createGLRLMatrix2DDMRG(boost::multi_array<T, R> inputMatrix, int ang) {
 	GLRLMFeatures2DAVG<T, R> glrlm2Davg;
 	int sizeMatrix = this->diffGreyLevels.size();
 	glrlmMat sum(boost::extents[sizeMatrix][this->maxRunLength]);
@@ -73,7 +73,7 @@ boost::multi_array<double, 2> GLRLMFEATURES2DDMRG<T, R>::createGLRLMatrix2DDMRG(
 	
 
 template <class T, size_t R>
-void GLRLMFEATURES2DDMRG<T, R>::fill2DMatrices2DDMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, int depth, int ang) {
+void GLRLMFEATURES2DDMRG<T, R>::fill2DMatrices2DDMRG(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, int depth, int ang) {
 
 	T actGreyLevel = 0;
 	T actElement = 0;
@@ -125,7 +125,7 @@ void GLRLMFEATURES2DDMRG<T, R>::fill2DMatrices2DDMRG(boost::multi_array<T, R> in
 }
 
 template <class T, size_t R>
-void GLRLMFEATURES2DDMRG<T, R>::calculateRunPercentage2DDMRG(boost::multi_array<T, R> inputMatrix, int depth, double totalSum, int nrNeighbor) {
+void GLRLMFEATURES2DDMRG<T, R>::calculateRunPercentage2DDMRG(boost::multi_array<T, R> inputMatrix, int depth, float totalSum, int nrNeighbor) {
 	int totalNrVoxels = 0;
 	for (int depth = 0; depth < inputMatrix.shape()[2];  depth++) {
 		for (int row = 0; row < inputMatrix.shape()[0]; row++) {
@@ -147,7 +147,7 @@ void GLRLMFEATURES2DDMRG<T, R>::calculateRunPercentage2DDMRG(boost::multi_array<
 }
 
 template <class T, size_t R>
-void GLRLMFEATURES2DDMRG<T, R>::calculateAllGLRLMFeatures2DDMRG(GLRLMFEATURES2DDMRG<T, R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<double> spacing, ConfigFile config) {
+void GLRLMFEATURES2DDMRG<T, R>::calculateAllGLRLMFeatures2DDMRG(GLRLMFEATURES2DDMRG<T, R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<float> spacing, ConfigFile config) {
 	this->diffGreyLevels = diffGrey;
 	normGLRLM = config.normGLRLM;
 	actualSpacing = spacing;
@@ -169,13 +169,13 @@ void GLRLMFEATURES2DDMRG<T, R>::calculateAllGLRLMFeatures2DDMRG(GLRLMFEATURES2DD
 	T sumRunLengthVar = 0;
 	T sumRunEntropy = 0;
 
-	vector<double> rowSums;
-	vector<double> colSums;
+	vector<float> rowSums;
+	vector<float> colSums;
 
 
 
-	double meanGrey;
-	double meanRun;
+	float meanGrey;
+	float meanRun;
 
 	int totalDepth = inputMatrix.shape()[2];
 
@@ -184,13 +184,13 @@ void GLRLMFEATURES2DDMRG<T, R>::calculateAllGLRLMFeatures2DDMRG(GLRLMFEATURES2DD
 	int ang;
 	for (int i = 0; i < 4; i++) {
 		ang = 180 - i * 45;
-		boost::multi_array<double, 2> glrlMatrix = createGLRLMatrix2DDMRG(inputMatrix, ang);
+		boost::multi_array<float, 2> glrlMatrix = createGLRLMatrix2DDMRG(inputMatrix, ang);
 
 		totalSum = glrlmFeatures.calculateTotalSum(glrlMatrix);
 		rowSums = glrlmFeatures.calculateRowSums(glrlMatrix);
 		colSums = glrlmFeatures.calculateColSums(glrlMatrix);
 
-		boost::multi_array<double, 2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
+		boost::multi_array<float, 2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
 		meanGrey = glrlmFeatures.calculateMeanProbGrey(probMatrix);
 		meanRun = glrlmFeatures.calculateMeanProbRun(probMatrix);
 
@@ -280,8 +280,14 @@ void GLRLMFEATURES2DDMRG<T, R>::writeCSVFileGLRLM2DDMRG(GLRLMFEATURES2DDMRG<T, R
 }
 
 template <class T, size_t R>
-void GLRLMFEATURES2DDMRG<T, R>::writeOneFileGLRLM2DDMRG(GLRLMFEATURES2DDMRG<T, R> glrlmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLRLMFEATURES2DDMRG<T, R>::writeOneFileGLRLM2DDMRG(GLRLMFEATURES2DDMRG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -289,14 +295,38 @@ void GLRLMFEATURES2DDMRG<T, R>::writeOneFileGLRLM2DDMRG(GLRLMFEATURES2DDMRG<T, R
 	ofstream glrlmCSV;
 	glrlmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	glrlm.defineGLRLMFeatures(features);
+	
 
 	vector<T> glrlmData;
 	extractGLRLMData2DDMRG(glrlmData, glrlmFeat);
-	for (int i = 0; i< glrlmData.size(); i++) {
-		glrlmCSV << "GLRLMFeatures2DDmrg" << "," << features[i] << ",";
-		glrlmCSV << glrlmData[i];
-		glrlmCSV << "\n";
+	if (config.csvOutput == 1) {
+		glrlm.defineGLRLMFeatures(features);
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << "GLRLMFeatures2DDmrg" << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i];
+			glrlmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glrlm.defineGLRLMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "2DDmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glrlmCSV << "\n";
+		}
+
 	}
 	glrlmCSV.close();
 }

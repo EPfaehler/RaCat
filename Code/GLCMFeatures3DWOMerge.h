@@ -17,14 +17,14 @@ This class only contains the calculations of the merged matrix.
 template <class T,  size_t R>
 class GLCMFeatures3DWOMerge : GLCMFeatures<T, R>{
     private:
-        typedef boost::multi_array<double, 2>  glcmat;
+        typedef boost::multi_array<float, 2>  glcmat;
 
         string normGLCM;
-        vector<double> actualSpacing;
+        vector<float> actualSpacing;
         void defineGLCMFeatures3DWOMerge(vector<string> &features);
         void extractGLCMData3D(vector<T> &glcmData, GLCMFeatures3DWOMerge<T, R> glcmFeatures);
-        void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int angle, int directionZ);
-        boost::multi_array<double, 2> getMatrixSum( boost::multi_array<T, R> inputMatrix, float maxIntensity);
+        void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int angle, int directionZ);
+        boost::multi_array<float, 2> getMatrixSum( boost::multi_array<T, R> inputMatrix, float maxIntensity);
         //store different grey levels in vector
         vector<T> diffGreyLevels;
 
@@ -37,28 +37,18 @@ class GLCMFeatures3DWOMerge : GLCMFeatures<T, R>{
         T HXY1;
         T HXY2;
     public:
-		GLCMFeatures3DWOMerge() {
-		}
-		~GLCMFeatures3DWOMerge() {
-		}
         void writeCSVFileGLCM3D(GLCMFeatures3DWOMerge<T,R> glcmFeat, string outputFolder);
-		void writeOneFileGLCM3D(GLCMFeatures3DWOMerge<T, R> glcmFeat, string outputFolder);
-        void calculateAllGLCMFeatures3DWOMerge(GLCMFeatures3DWOMerge<T,R> &glcmFeat, boost::multi_array<T,R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config);
+
+        void calculateAllGLCMFeatures3DWOMerge(GLCMFeatures3DWOMerge<T,R> &glcmFeat, boost::multi_array<T,R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config);
 };
 
 
 
 
 
-/*!
-In the method fill3DMatrices the GLCM matrix is filled with the according values
-@param[in] inputMatrix: the original matrix of the VOI
-@param[in]: glcm matrix: as reference: matrix that has to be filled
-@param[in]: int angle: angle for which the actual glcm matrix is calculated
-@param[in]: in directionZ: in which z direction we are going
-*/
+//fill now the GLCMatrices with the right values
 template <class T, size_t R>
-void GLCMFeatures3DWOMerge<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int angle, int directionZ){
+void GLCMFeatures3DWOMerge<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int angle, int directionZ){
     
     float weight;
     int directionX;
@@ -83,14 +73,9 @@ void GLCMFeatures3DWOMerge<T, R>::fill3DMatrices(boost::multi_array<T, R> inputM
 	
 }
 
-/*!
-In the method getMatrixSum calculates the sum of all calculated GLCM matrices
-@param[in] inputMatrix: the original matrix of the VOI
-@param[in]: float maxValue: maximum intensity value of VOI, 
-@param[out]: boost multi_array: summed GLCM matrices
-*/
+
 template <class T, size_t R>
-boost::multi_array<double, 2> GLCMFeatures3DWOMerge<T,R>::getMatrixSum( boost::multi_array<T, R> inputMatrix, float maxIntensity){
+boost::multi_array<float, 2> GLCMFeatures3DWOMerge<T,R>::getMatrixSum( boost::multi_array<T, R> inputMatrix, float maxIntensity){
 
     int sizeMatrix= maxIntensity;
 
@@ -136,12 +121,12 @@ boost::multi_array<double, 2> GLCMFeatures3DWOMerge<T,R>::getMatrixSum( boost::m
 }
 
 template <class T, size_t R>
-void GLCMFeatures3DWOMerge<T, R>::calculateAllGLCMFeatures3DWOMerge(GLCMFeatures3DWOMerge<T,R> &GLCMFeatures3DWOMerge, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config){
+void GLCMFeatures3DWOMerge<T, R>::calculateAllGLCMFeatures3DWOMerge(GLCMFeatures3DWOMerge<T,R> &GLCMFeatures3DWOMerge, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config){
     //get which norm should be used in the calculation of the GLCM features
     normGLCM = config.normGLCM;
     actualSpacing = spacing;
 
-    boost::multi_array<double,2> GLCM180=GLCMFeatures3DWOMerge.getMatrixSum(inputMatrix, maxIntensity);
+    boost::multi_array<float,2> GLCM180=GLCMFeatures3DWOMerge.getMatrixSum(inputMatrix, maxIntensity);
     GLCMFeatures3DWOMerge.calculateJointMaximum(GLCM180);
     GLCMFeatures3DWOMerge.calculateJointAverage(GLCM180);
     GLCMFeatures3DWOMerge.calculateJointVariance(GLCM180, this->jointAverage);
@@ -200,7 +185,7 @@ void GLCMFeatures3DWOMerge<T, R>::calculateAllGLCMFeatures3DWOMerge(GLCMFeatures
 template <class T, size_t R>
 void GLCMFeatures3DWOMerge<T, R>::writeCSVFileGLCM3D(GLCMFeatures3DWOMerge<T,R> glcmFeat, string outputFolder)
 {
-    string csvName = outputFolder + "/glcmFeatures3Davg.csv";
+    string csvName = outputFolder + "/glcmFeatures3DWOMerge.csv";
     char * name = new char[csvName.size() + 1];
     std::copy(csvName.begin(), csvName.end(), name);
     name[csvName.size()] = '\0';
@@ -213,33 +198,11 @@ void GLCMFeatures3DWOMerge<T, R>::writeCSVFileGLCM3D(GLCMFeatures3DWOMerge<T,R> 
     vector<T> glcmData;
     extractGLCMData3D(glcmData, glcmFeat);
     for(int i = 0; i< glcmData.size(); i++){
-        glcmCSV <<"glcmFeatures3Davg"<<","<< features[i] <<",";
+        glcmCSV << features[i] <<";";
         glcmCSV << glcmData[i];
         glcmCSV << "\n";
     }
     glcmCSV.close();
-}
-
-template <class T, size_t R>
-void GLCMFeatures3DWOMerge<T, R>::writeOneFileGLCM3D(GLCMFeatures3DWOMerge<T, R> glcmFeat, string outputFolder) {
-	string csvName = outputFolder + "/radiomicsFeatures.csv";
-	char * name = new char[csvName.size() + 1];
-	std::copy(csvName.begin(), csvName.end(), name);
-	name[csvName.size()] = '\0';
-
-	ofstream glcmCSV;
-	glcmCSV.open(name, std::ios_base::app);
-	vector<string> features;
-	defineGLCMFeatures3DWOMerge(features);
-
-	vector<T> glcmData;
-	extractGLCMData3D(glcmData, glcmFeat);
-	for (int i = 0; i< glcmData.size(); i++) {
-		glcmCSV << "glcmFeatures3Davg" << "," << features[i] << ",";
-		glcmCSV << glcmData[i];
-		glcmCSV << "\n";
-	}
-	glcmCSV.close();
 }
 
 template <class T, size_t R>

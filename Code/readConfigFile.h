@@ -4,9 +4,15 @@
 #include <iostream>
 #include <fstream>
 #include <ctime>
-
+#include <direct.h>
+#include <vector>
+#include "itkMetaDataObject.h"
+#include "itkTypes.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
+#include <boost/tokenizer.hpp>
+using namespace itkTypes;
+//#include <boost/filesystem.hpp>
 #ifdef _WIN32
 #include<windows.h>
 
@@ -117,6 +123,7 @@ UseSUV has to be set to 1.
 
 class ConfigFile{
     public:
+		string testImageName;
         string fileName;
         inline config readIni(string iniFile);
         config pt;
@@ -138,16 +145,20 @@ class ConfigFile{
 		int discretizeIVH;
 		int discretizeIVHSeparated;
 		int useFixedBinWidthIVH;
-		int binWidthIVH;
+		float binWidthIVH;
 		int useFixedNrBinsIVH;
 		int nrBinsIVH;
 		//! value to state if 2D or 3D interpolation, if set to 0 3D interpolation is applied
+		int rebinning_centering;
 		int interpolation2D;
 		string interpolationMethod;
+		string imageName;
         // !integer which states if we use down sampling
         int useDownSampling;
+		int includePatData;
 		int useUpSampling;
-		int useSampling2mm;
+		int useSamplingCubic;
+		int cubicVoxelSize;
 		//! integer which states if resegmentation is used
 		int useReSegmentation;
 		int excludeOutliers;
@@ -170,15 +181,17 @@ class ConfigFile{
 		int calculateAllFeatures = 0;
 		string patientInfoLocation;
         //!names of images and folders
-        string imageName;
         string voiName;
         string imageType;
+
+		float niftiSlope;
+		float niftiIntercept;
 		//!name of folder, where values are stored
         string outputFolder;
 		//!integer which states which kind of output
 		int getOneCSVFile;
 		int csvOutput;
-		int ontologyOutput;
+		int ontologyOutput = 0;
 		//!parameters to calculate the SUV value in case we have a PET image; this values can be set in the patientInfo.ini file
         int useSUV;
         int useSUL;
@@ -188,9 +201,10 @@ class ConfigFile{
 		std::string gender;
         float initActivity;
         int minAfterInjection;
+		float units_rescaling_factor;
 		//!the correction parameter overwrites the SUV values set before (if bigger than 1)
 		//!all image values will be divided by it, instead of dividing by calculated SUV
-		double correctionParam;
+		float correctionParam;
 		//!get smoothing kernel
 		void getSmoothingKernel();
 		//!get threshold
@@ -225,9 +239,40 @@ class ConfigFile{
         void getInterpolation();
 		//! copies the config file to the output folder
 		void copyConfigFile(string outputFolder);
-		void createOutputFolder(ConfigFile &config);
+		void createOutputFile(ConfigFile &config);
 		//! adjusts all values to the attributes in the ConfigFile
 		void createConfigInfo(ConfigFile &config, string arguments[7]);
+		void getDemographicInfo(string image);
+		//! tables to create ontology output
+		string patientID;
+		string patientLabel;
+		string imageSpaceName;
+		string featureParameterSpaceName;
+		string calculationSpaceName;
+		string discretisationParameters;
+		int featureParameterSpaceNr = 0;
+		int overWriteCSV;
+		void createOntologyImageFilterSpaceTable(ConfigFile config);
+		void createOntologyResegmentationTable(ConfigFile config);
+		void createOntologyNGTDMTable(ConfigFile config);
+		void createOntologyNGLDMTable(ConfigFile config);
+		void createOntologySoftwareTable(ConfigFile config);
+		void createOntologySegmentationMethodTable(ConfigFile config);
+		void createOntologyScanTable(ConfigFile config);
+		void createOntologyPostAcquisitionProcessingTable(ConfigFile config);
+		void createOntologyROIMaskTable(ConfigFile config);
+		void createOntologyMorphParametersTable(ConfigFile config);
+		void createOntologyIntVolHistParametersTable(ConfigFile config);
+		void createOntologyImageVolumeParametersTable(ConfigFile config);
+		void createOntologyInterpolationParametersTable(ConfigFile config);
+		void createOntologyGldzmParameterTable(ConfigFile config);
+		void createOntologyGlcmParameterTable(ConfigFile config);
+		void createOntologyGlrlmParameterTable(ConfigFile config);
+		void createOntologyFeatureSpecificParameterTable(ConfigFile config);
+		void createOntologyFeatureParameterSpaceTable(ConfigFile config);
+		void createOntologyRunSpaceTable(ConfigFile config);
+		void createOntologyDiscretisationParameterTable(ConfigFile config);
+		void createOntologyImageSpaceTable(ConfigFile config);
 };
 
 /*!
@@ -309,7 +354,6 @@ The method getFeatureSelectionLocation reads the location of the feature selecti
 */
 inline void ConfigFile::getFeatureSelectionLocation(string featPath) {
 	config pt = readIni(fileName);
-	
 	if (featPath != "0") {
 		featureSelectionLocation = featPath;
 	}
@@ -363,6 +407,7 @@ inline void ConfigFile::getDiscretizationInformationIVH() {
 		useFixedBinWidthIVH = 1;
 	}
 	if (useFixedBinWidthIVH == 1) {
+		
 		binWidthIVH = pt.get<float>("DiscretizationIVH.BinWidthIVH", 0.25);
 		if (binWidthIVH < 0) {
 			std::cout << "please fill in a valid number for the bin width" << std::endl;
@@ -389,6 +434,7 @@ sets the attributes of the class Config to the equivalent values
 */
 inline void ConfigFile::getInterpolation() {
 	config pt = readIni(fileName);
+	rebinning_centering = pt.get("Interpolation.Rebinning_centering", 0);
 	interpolation2D = pt.get("Interpolation.2DInterpolation", 0);
 	interpolationMethod = pt.get<std::string>("Interpolation.InterpolationMethod");
 	useDownSampling = pt.get("Interpolation.UseDownSampling2Cubic", 1);
@@ -401,24 +447,26 @@ inline void ConfigFile::getInterpolation() {
 		std::cout << "You inserted a value for UseUpSampling2Cubic that is not 0 or 1, it will be set to 1" << std::endl;
 		useUpSampling = 1;
 	}
-	useSampling2mm = pt.get("Interpolation.UseSamplingTo2mmVoxel", 1);
-	if (useSampling2mm != 0 && useSampling2mm != 1) {
-		std::cout << "You inserted a value for useSampling2mm that is not 0 or 1, it will be set to 1" << std::endl;
-		useSampling2mm = 1;
+	useSamplingCubic = pt.get("Interpolation.UseSamplingToCubic", 1);
+	cubicVoxelSize = pt.get("Interpolation.CubicVoxelSize", 2);
+	if (useSamplingCubic != 0 && useSamplingCubic != 1) {
+		std::cout << "You inserted a value for useSamplingCubic that is not 0 or 1, it will be set to 1" << std::endl;
+		useSamplingCubic = 1;
 	}
-	if (useSampling2mm + useDownSampling + useUpSampling > 1) {
+	if (useSamplingCubic + useDownSampling + useUpSampling > 1) {
 		std::cout << "You chose more than one interpolation method" << std::endl;
 		if ( useUpSampling ==1) {
 			std::cout << "Only up sampling is performed. Please fill out another config file for the other interpolation methods" << std::endl;
-			useSampling2mm = 0;
+			useSamplingCubic = 0;
 			useDownSampling = 0;
 		}
 		else if (useUpSampling != 1 && useDownSampling ==1) {
 			std::cout << "Only down sampling is performed. Please fill out another config file for the other interpolation methods" << std::endl;
-			useSampling2mm = 0;
+			useSamplingCubic = 0;
 			useUpSampling = 0;
 		}
 	}
+
 }
 
 /*!
@@ -464,6 +512,83 @@ inline void ConfigFile::getImageFolder(string image, string voi) {
 	imageName = image;
 	voiName = voi;
 	imageType = pt.get<std::string>("ImageProperties.ImageType");
+
+	
+	std::string nifti = ".nii";
+	niftiSlope = 1;
+	niftiIntercept = 0;
+	if (imageName.find(nifti) != string::npos) {
+		typename ReaderType::Pointer reader = ReaderType::New();
+		reader->SetFileName(imageName);
+		try {
+			reader->Update();
+		}
+		catch (itk::ExceptionObject &excp) {
+			std::cerr << excp << std::endl;
+		}
+		ImageType::Pointer imageData = reader->GetOutput();
+
+		itk::MetaDataDictionary imgMetaDictionary = imageData->GetMetaDataDictionary();
+		std::vector<std::string> imgMetaKeys = imgMetaDictionary.GetKeys();
+		std::vector<std::string>::const_iterator itKey = imgMetaKeys.begin();
+		std::string metaString;
+		std::string actImgKey;
+		int counter = 0;
+		std::string slope = "slope";
+		std::string inter = "inter";
+		std::string qform = "qform_code";
+		std::string qformName = "qform_code_name";
+		std::string sform = "sform";
+		std::string sformName = "sform_code_name";
+		int sformNr;
+		int qformNr;
+		for (; itKey != imgMetaKeys.end(); ++itKey)
+		{
+			double x, y, z;
+			itk::ExposeMetaData<std::string>(imgMetaDictionary, *itKey, metaString);
+
+			actImgKey = imgMetaKeys.at(counter);
+			
+			if (actImgKey.find(qform) != string::npos && actImgKey.find(qformName) == string::npos) {
+
+				
+				qformNr = strtof((metaString).c_str(), 0);
+
+			}
+			else if (actImgKey.find(sform) != string::npos && actImgKey.find(sformName) == string::npos) {
+
+				
+				sformNr = strtof((metaString).c_str(), 0);
+
+			}
+			counter++;
+		}
+		if (qformNr == 0 && sformNr == 0 ) {
+			std::cout << "qform and sform are set to 0" << std::endl;
+			counter = 0;
+			itKey = imgMetaKeys.begin();
+			for (; itKey != imgMetaKeys.end(); ++itKey)
+			{
+				double x, y, z;
+				itk::ExposeMetaData<std::string>(imgMetaDictionary, *itKey, metaString);
+
+				actImgKey = imgMetaKeys.at(counter);
+				if (actImgKey.find(slope) != string::npos) {
+
+					niftiSlope = strtof((metaString).c_str(), 0);
+					if (niftiSlope == 0) {
+						niftiSlope = 1;
+					}
+
+
+				}
+				else if (actImgKey.find(inter) != string::npos) {
+					niftiIntercept = strtof((metaString).c_str(), 0);
+				}
+				counter++;
+			}
+		}
+	}
 }
 
 /*!
@@ -473,8 +598,9 @@ inline void ConfigFile::getOutputInformation(string output) {
 	config pt = readIni(fileName);
 	outputFolder = output;
 	csvOutput = pt.get("OutputInformation.csvOutput", 1);
-	ontologyOutput = pt.get("OutputInformation.ontologyOutput", 1);
+	ontologyOutput = pt.get("OutputInformation.OntologyOutput", 1);
 	getOneCSVFile = pt.get("OutputInformation.GetOneCSVFile", 1);
+	overWriteCSV = pt.get("OutputInformation.OverwriteCSV", 1);
 	if (csvOutput == 0 && getOneCSVFile == 1) {
 		std::cout << "The CSVOutput is set to 0, but getOneCSVFile is set to 1. The CSVOutput is still generated" << std::endl;
 		csvOutput = 1;
@@ -484,10 +610,57 @@ inline void ConfigFile::getOutputInformation(string output) {
 		csvOutput = 1;
 		getOneCSVFile = 1;
 	}
+	else if (ontologyOutput == 1) {
+		std::cout << "OntologyOutput will be generated" << std::endl;
+	}
 }
 
 
+/*!
+The method getOutputFolder gets the output folder path provided in the command line and reads the output information
+*/
+inline void ConfigFile::getDemographicInfo(string outputFolderName) {
+	config pt = readIni(fileName);
+	includePatData = pt.get("PatData.includePatData", 1);
+	if (includePatData == 1 && csvOutput == 1) {
+		string csvName = outputFolderName + string(".csv");
 
+
+		char * name = new char[csvName.size() + 1];
+		std::copy(csvName.begin(), csvName.end(), name);
+		name[csvName.size()] = '\0';
+		if (useAccurate == 1) {
+			std::string csvEnding = ".csv";
+
+			ifstream in(imageName + csvEnding);
+			string line;
+			int lineCount = 0;
+			ofstream outputFile;
+			outputFile.open(name);
+			while (in.good()) {
+				getline(in, line);
+				
+				if (lineCount == 4) {
+					outputFile << "Patient Details"<<","<<"Patient Name" << "," << line << "\n";
+				}
+				else if (lineCount == 5) {
+					outputFile << "Patient Details" << "," << "PatientID" << "," << line << "\n";
+				}
+				else if (lineCount == 9) {
+					outputFile << "Patient Details" << "," << "Scan start" << "," << line << "\n";
+				}
+				else if (lineCount == 10) {
+					outputFile << "Patient Details" << "," << "Scan Date" << "," << line << "\n";
+				}
+				lineCount += 1;
+				
+			}
+			outputFile.close();
+		}
+
+	}
+	
+}
 
 /*!
 The method getPETimageInformation reads the pet image information of the patientInfo.ini-file and
@@ -499,16 +672,17 @@ inline void ConfigFile::getPETimageInformation(string imagePath, string patientI
 		std::cout << "The ImageType is set to PET but no patient info was given. Program stops." << std::endl;		
 		exit(EXIT_FAILURE);
 	}
-
+	//testImageName = pt.get<std::string>("ImageProperties.test");
+	imageName = imagePath;
 	if (pt.get<std::string>("ImageProperties.ImageType") == "PET") {
 		//read info from patient info ini file
 		boost::property_tree::ptree patientInfo;
 		boost::property_tree::ini_parser::read_ini(patientInfoLocation, patientInfo);
 		useSUV = patientInfo.get("PatientInfo.UseSUV", 1);
 		useSUL = patientInfo.get("PatientInfo.UseSUL", 0);
-		correctionParam = patientInfo.get<double>("PatientInfo.ScalingFactor");
-
-		if (correctionParam == double(0)) {
+		correctionParam = patientInfo.get<float>("PatientInfo.ScalingFactor");
+		units_rescaling_factor = patientInfo.get<float>("PatientInfo.units_rescaling_factor");
+		if (correctionParam == float(0)) {
 			patientWeight = patientInfo.get<float>("PatientInfo.PatientWeight");
 			patientHeight = patientInfo.get<float>("PatientInfo.PatientHeight");
 
@@ -526,7 +700,11 @@ inline void ConfigFile::getPETimageInformation(string imagePath, string patientI
 				std::cout << "The gender could not be identified. The calculation of SUL is not possible" << std::endl;
 			}
 		}
+		else {
+			useSUV = 1;
+		}
 	}
+
 }
 
 /*!
@@ -580,6 +758,7 @@ inline void ConfigFile::createConfigInfo(ConfigFile &config, string arguments[8]
 	config.getThreshold();
 	config.patientInfoLocation = arguments[6];
 	config.getAccurateState(arguments[4]);
+
 	config.getVoiState(arguments[5]);
 	config.getImageFolder(arguments[1], arguments[2]);
 	config.getResegmentationState();
@@ -594,34 +773,412 @@ inline void ConfigFile::createConfigInfo(ConfigFile &config, string arguments[8]
 	config.getExtendedEmphasisInformation();
 	config.getNGLDMParameters();
 	config.getNGTDMdistanceValue();
+	
+	if (config.ontologyOutput == 1) {
+		
+		struct stat info;
+		if (stat((config.outputFolder).c_str(), &info) != 0) {
+			
+			int status = _mkdir((config.outputFolder).c_str());
+		}
+		else if (info.st_mode & S_IFDIR) { 
+			printf("%s Directory already exists\n", (config.outputFolder).c_str());
+			string outputFolderTmp;
+			char * writable = new char[outputFolderTmp.size() + 1];
+			std::copy(outputFolderTmp.begin(), outputFolderTmp.end(), writable);
+			writable[outputFolderTmp.size()] = '\0';
+			char * writable2 = new char[config.outputFolder.size() + 1];
+			std::copy(config.outputFolder.begin(), config.outputFolder.end(), writable2);
+			writable2[config.outputFolder.size()] = '\0';
+			ifstream f(writable);
+			std::time_t now = std::time(NULL);
+			std::tm * ptm = std::localtime(&now);
+			char buffer2[32];
+			std::strftime(buffer2, 32, "%a%d%m%Y%H%M%S", ptm);				
+			std::string path = writable2 + string(buffer2);
+			config.outputFolder = path;
+			int status = _mkdir((path).c_str());		
+		}
+		
+		discretisationParameters = "DiscretisationParameters_1";
+		createOntologyResegmentationTable(config);
+		createOntologyNGTDMTable(config);
+		createOntologyNGLDMTable(config);
+		createOntologySoftwareTable(config);
+		createOntologySegmentationMethodTable(config);
+		createOntologyScanTable(config);
+		createOntologyPostAcquisitionProcessingTable( config);
+		createOntologyROIMaskTable(config);
+		createOntologyMorphParametersTable(config);
+		createOntologyIntVolHistParametersTable(config);
+		createOntologyImageVolumeParametersTable(config);
+		createOntologyInterpolationParametersTable(config);
+		createOntologyGldzmParameterTable( config);
+		createOntologyGlcmParameterTable( config);
+		createOntologyGlrlmParameterTable( config);
+		createOntologyFeatureSpecificParameterTable(config);
+		createOntologyFeatureParameterSpaceTable(config);
+		createOntologyRunSpaceTable(config);
+		createOntologyDiscretisationParameterTable(config);
+		createOntologyFeatureSpecificParameterTable(config);
+		createOntologyFeatureParameterSpaceTable(config);
+		createOntologyImageSpaceTable(config);
+	}
 }
 
 /*!
 The method createOutputFolder creates the outputFolder, if it does not already exists.\n
 If it exists, a warning message is printed on the screen, that the data will be overwritten
 */
-inline void ConfigFile::createOutputFolder(ConfigFile &config) {
-	string outputFolderTmp = config.outputFolder + string(".csv");
-	char * writable = new char[outputFolderTmp.size() + 1];
-	std::copy(outputFolderTmp.begin(), outputFolderTmp.end(), writable);
-	writable[outputFolderTmp.size()] = '\0';
-	char * writable2 = new char[config.outputFolder.size() + 1];
-	std::copy(config.outputFolder.begin(), config.outputFolder.end(), writable2);
-	writable2[config.outputFolder.size()] = '\0';
-	ifstream f(writable);
-	if (f.good() == 1) {
-		std::time_t now = std::time(NULL);
-		std::tm * ptm = std::localtime(&now);
-								
-		char buffer2[32];
-				
-		std::strftime(buffer2, 32, "%a%d%m%Y%H%M%S", ptm);
-		std::string path = writable2+string(buffer2);
-		config.outputFolder = path;
-		std::cout << ("The chosen outputfile already exists. The data will be saved in the file %s .csv", path) << std::endl;
+inline void ConfigFile::createOutputFile(ConfigFile &config) {
+	
+	
+
+	if (config.overWriteCSV == 0) {
+		string  outputFolderTmp = config.outputFolder + string(".csv");
+		char * writable = new char[outputFolderTmp.size() + 1];
+		std::copy(outputFolderTmp.begin(), outputFolderTmp.end(), writable);
+		writable[outputFolderTmp.size()] = '\0';
+		char * writable2 = new char[config.outputFolder.size() + 1];
+		std::copy(config.outputFolder.begin(), config.outputFolder.end(), writable2);
+		writable2[config.outputFolder.size()] = '\0';
+		ifstream f(writable);
+		if (f.good() == 1) {
+			std::time_t now = std::time(NULL);
+			std::tm * ptm = std::localtime(&now);
+
+			char buffer2[32];
+
+			std::strftime(buffer2, 32, "%a%d%m%Y%H%M%S", ptm);
+			std::string path = writable2 + string(buffer2);
+			config.outputFolder = path;
+			std::cout << ("The chosen outputfile already exists. The data will be saved in the file %s .csv", path) << std::endl;
+		}
 	}
+	
+	config.getDemographicInfo(config.outputFolder);
+}
+
+inline void ConfigFile::createOntologyResegmentationTable(ConfigFile config) {
+	string csvName = outputFolder + "/ReSegmentationsParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream resegTable;
+	resegTable.open(name);
+	resegTable << "ReSegmentationParameters_name,ReSegmentationRange_min_value,ReSegmentationRange_min_unit,ReSegmentationRange_max_value,ReSegmentationRange_max_unit\n";
+	resegTable << "ReSegmentation1" << "," <<config.minValueReSeg<<","<<" " << ","<<config.maxValueReSeg<<","<<" "<<",";
+
+	resegTable << config.maxValueReSeg <<  "," << "unit" << ",";
+	resegTable << config.excludeOutliers << "/n";
+	resegTable.close();
+	
+}
+
+inline void ConfigFile::createOntologyNGTDMTable(ConfigFile config) {
+	string csvName = outputFolder + "/NGTDMParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream NGTDMParam;
+	NGTDMParam.open(name);
+	NGTDMParam << "ngtdmParameters_name,DistanceNorm_method,DistanceNorm_value,DistanceNorm_unit,DistanceWeighting_function\n";
+	NGTDMParam << "NGTDMParameters" << config.normNGTDM << "," << config.dist;
+
+	NGTDMParam << "," << "unit"<<","<<"Inverse";
+	NGTDMParam.close();
+
+}
+
+inline void ConfigFile::createOntologyImageFilterSpaceTable(ConfigFile config) {
+	string csvName = outputFolder + "/ImageFilterSpace_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream imageFilterSpace;
+	imageFilterSpace.open(name);
+	imageFilterSpace << "ImageFilterSpace_name, WaveletFilterParameters_name\n";
+	imageFilterSpace << " " << "," << " ";
+
+	imageFilterSpace.close();
+
+}
+
+inline void ConfigFile::createOntologyNGLDMTable(ConfigFile config) {
+	string csvName = outputFolder + "/NGLDMParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream NGLDMtable;
+	NGLDMtable.open(name);
+	NGLDMtable << "ngldmParameters_name,Dependence_coarseness_value,DistanceNorm_method,DistanceNorm_value,DistanceNorm_unit\n";
+	NGLDMtable << "NGLDMParam" << "," << config.coarsenessParam << "," << config.normNGTDM << "," << config.distNGLDM << "," << "unit";
+
+	NGLDMtable.close();
+
+}
+
+
+inline void ConfigFile::createOntologySoftwareTable(ConfigFile config) {
+	string csvName = outputFolder + "/Software_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream softwareTable;
+	softwareTable.open(name);
+	softwareTable << "Software_name,Software_label,Version,ProgrammingLanguage,Institution\n";
+	softwareTable << "RaCaT" << "," << "Inhouse"<< "," << "1.4";
+	softwareTable << "C++" << "," << "UMCG Groningen";
+	softwareTable.close();
+
+}
+
+inline void ConfigFile::createOntologySegmentationMethodTable(ConfigFile config) {
+	string csvName = outputFolder + "/SegmentationMethod_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream segmMethodTable;
+	segmMethodTable.open(name);
+	segmMethodTable << "SegmentationMethod_name,Method\n";
+	segmMethodTable << "SegmentationMethod" << "," << "SUV4";
+	
+	segmMethodTable.close();
+
+}
+
+inline void ConfigFile::createOntologyScanTable(ConfigFile config) {
+	string csvName = outputFolder + "/Scan_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream scanTable;
+	scanTable.open(name);
+	scanTable << "Scan_name,PatientID,Patient_label,ImagingModality,DICOMspace_name\n";
+	scanTable << "Scan_name" << "," << "," << "," << config.imageType<<"," << "," ;
+
+	scanTable.close();
+
+}
+
+inline void ConfigFile::createOntologyROIMaskTable(ConfigFile config) {
+	string csvName = outputFolder + "/ROIMask_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream ROIMaskTable;
+	ROIMaskTable.open(name);
+	ROIMaskTable << "ROImask_name,ROImask_label,ROItype,ROItype_label,VoxelDimensionX_name,VoxelDimensionY_name,VoxelDimensionZ_name,SegmentationMethod_name\n";
+	ROIMaskTable << config.voiName << "," << " " << "," << " " << "," << " " << "," << " ";
+
+	ROIMaskTable.close();
+
+}
+
+inline void ConfigFile::createOntologyPostAcquisitionProcessingTable(ConfigFile config) {
+	string csvName = outputFolder + "/PostAcquisitionProcessing_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream PostAcquisitionProcessingTable;
+	PostAcquisitionProcessingTable.open(name);
+	PostAcquisitionProcessingTable << "PostAcquisitionProcessing_name,PartialVolumeEffectCorrection_name,NoiseReduction_name,ImageNonUniformityCorrection_name\n";
+	PostAcquisitionProcessingTable << " " << "," << " " << "," << " " << "," << " " ;
+
+	PostAcquisitionProcessingTable.close();
+
+}
+
+inline void ConfigFile::createOntologyMorphParametersTable(ConfigFile config) {
+	string csvName = outputFolder + "/morphParameters_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream morphParamTable;
+	morphParamTable.open(name);
+	morphParamTable << "morphParameters_name,Method,Value\n";
+	morphParamTable << "MorphParameters" << "," << " " <<","<<config.threshold;
+
+	morphParamTable.close();
+
+}
+
+inline void ConfigFile::createOntologyIntVolHistParametersTable(ConfigFile config) {
+	string csvName = outputFolder + "/intVolHistParameters_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream intVolHistParameters;
+	intVolHistParameters.open(name);
+	intVolHistParameters << "intVolHistParameters_name,intVolHist_MinBound_value,intVolHist_MinBound_unit,intVolHist_MaxBound_value,intVolHist_MaxBound_unit\n";
+	intVolHistParameters << " " << "," << " " << "," << " " << ","  << " ";
+
+	intVolHistParameters.close();
+
+}
+inline void ConfigFile::createOntologyInterpolationParametersTable(ConfigFile config) {
+	string csvName = outputFolder + "/interpolationParameters_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream interpolationParameters;
+	interpolationParameters.open(name);
+	interpolationParameters << "InterpolationParameters_name,Value,Unit,ImageVolume_method,ImageVolume_GreyLevelRound_value,ImageVolume_GreyLevelRound_unit,ROImask_method,ROImask_PartialVolumeCutoff_value\n";
+	interpolationParameters << "Interpolation_1" << "," << config.interpolation2D << "," <<config.interpolationMethod<< config.threshold;
+
+	interpolationParameters.close();
+
+}
+
+inline void ConfigFile::createOntologyImageVolumeParametersTable(ConfigFile config) {
+	string csvName = outputFolder + "/imageVolume_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream imageVolume;
+	imageVolume.open(name);
+	imageVolume << "ImageVolume_name,ImageVolume_label,VoxelDimensionX_name,VoxelDimensionY_name,VoxelDimensionZ_name,Scan_name,PostAcquisitionProcessing_name\n";
+	imageVolume << "MorphParameters" << "," << config.imageType << "," << config.threshold;
+
+	imageVolume.close();
+
+}
+
+inline void ConfigFile::createOntologyImageSpaceTable(ConfigFile config) {
+	string csvName = outputFolder + "/imageSpace_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream imageSpace;
+	imageSpace.open(name);
+	imageSpace << "ImageSpace_name,ImageVolume_name,ROImask_name\n";
+	imageSpace << " " << "," << config.imageType << "," << config.threshold;
+
+	imageSpace.close();
+
+}
+
+inline void ConfigFile::createOntologyGlrlmParameterTable(ConfigFile config) {
+	string csvName = outputFolder + "/glrlmParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream glrlmParameter;
+	glrlmParameter.open(name);
+	glrlmParameter << "glrlmParameters_name,DistanceWeighting_function\n";
+	glrlmParameter << "GLRLM_parameters" << "," << config.normGLRLM;
+
+	glrlmParameter.close();
+
+}
+
+inline void ConfigFile::createOntologyGlcmParameterTable(ConfigFile config) {
+	string csvName = outputFolder + "/glcmParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream glcmParameter;
+	glcmParameter.open(name);
+	glcmParameter << "glcmParameters_name,glcm_symmetry,DistanceNorm_method,DistanceNorm_value,DistanceNorm_unit,DistanceWeighting_function\n";
+	glcmParameter << "GLCM_parameters" << "," << "SYM"<<","<<config.normGLCM<<","<<1<<","<<' '<<","<<" ";
+
+	glcmParameter.close();
+
+}
+
+inline void ConfigFile::createOntologyGldzmParameterTable(ConfigFile config) {
+	string csvName = outputFolder + "/gldzmParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream gldzmParameter;
+	gldzmParameter.open(name);
+	gldzmParameter << "gldzmParameters_name,DistanceNorm_method,DistanceNorm_value,DistanceNorm_unit\n";
+	gldzmParameter << "GLDZM_parameters" << "," << "SYM"  << "," << 1 << "," << " " << "," << " ";
+
+	gldzmParameter.close();
+}
+
+inline void ConfigFile::createOntologyFeatureParameterSpaceTable(ConfigFile config) {
+	string csvName = outputFolder + "/FeatureParameterSpace_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream featureParameterSpace;
+	featureParameterSpace.open(name);
+	featureParameterSpace << "FeatureParameterSpace_name,AggregationParameters,ImageFilterSpace_name,InterpolationParameters_name,ReSegmentationParameters_name,DiscretisationParameters_name,FeatureSpecificParameters_name\n";
+	featureParameterSpace.close();
+
 }
 
 
 
+inline void ConfigFile::createOntologyFeatureSpecificParameterTable(ConfigFile config) {
+	string csvName = outputFolder + "/FeatureSpecificParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream featureSpecificParameter;
+	featureSpecificParameter.open(name);
+	featureSpecificParameter << "FeatureSpecificParameters_name,morphParameters_name,glcmParameters_name,glrlmParameters_name,gldzmParameters_name,ngtdmParameters_name,ngldmParameters_name,intVolHistParameters_name\n";
+	featureSpecificParameter << "FeatureSpecificParameters_1" << "," << "SYM" << "," << 1 << "," << "unit" << "," << "Inverse";
+
+	featureSpecificParameter.close();
+
+}
+
+inline void ConfigFile::createOntologyDiscretisationParameterTable(ConfigFile config) {
+	string csvName = outputFolder + "/DiscretisationParameter_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	std::ofstream discretisationParameter;
+
+	
+	discretisationParameter.open(name);
+	discretisationParameter << "DiscretisationParameters_name,Equalisation_NumberOfBins_value,Algorithm,Value,Unit,Discretisation_min_value,Discretisation_min_unit\n";
+	string unit;
+	if (config.imageType=="PET" && config.useSUV == 1) {
+		unit = 'SUV';
+	}
+	else if(config.imageType == "PET" && config.useSUL == 1) {
+		unit = 'SUL';
+	}
+	else if(config.imageType == "CT" ) {
+		unit = 'HU';
+	}
+	else {
+		unit = ' ';
+	}
+	if (config.useFixedBinWidth == 1) {
+		
+		discretisationParameter << "DiscretisationParameters_1" << "," << config.binWidth << "," << "FBW" << "," << "Value" << "," << unit<<","<<1<<","<< unit;
+	}
+	else if (config.useFixedNrBins == 1) {
+		discretisationParameter << "DiscretisationParameters_1" << "," << config.nrBins << "," << "FBN" << "," << "Value" << "," << unit << "," << 1 << "," << unit;
+	}
+	discretisationParameter.close();
+}
+
+inline void ConfigFile::createOntologyRunSpaceTable(ConfigFile config) {
+	string csvName = outputFolder + "/runSpace_table.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+	
+	std::time_t now = std::time(NULL);
+	std::tm * ptm = std::localtime(&now);
+
+	char buffer2[32];
+
+	std::strftime(buffer2, 32, "%a%d%m%Y%H%M%S", ptm);
+	std::string path = string(buffer2);
+
+	
+	std::ofstream runSpace;
+	runSpace.open(name);
+	runSpace << "CalculationRunSpace_name,TimeStamp,Software_name\n";
+	runSpace << "CalculationRunSpace_1" << "," << path << "," << "RaCaT";
+	runSpace.close();
+}
 #endif // READCONFIGFILE_H_INCLUDED

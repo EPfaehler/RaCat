@@ -22,7 +22,7 @@ class NGTDM2DAVG : NGTDMFeatures2DMRG<T, R> {
 private:
 	NGTDMFeatures2DMRG<T, R> ngtdm;
 	//these are the values to determine if the user wants to calculate novel/uncommon features
-	vector<double> actualSpacing;
+	vector<float> actualSpacing;
 	string normNGTDM;
 	//distance of neighborhood defined by the user
 	int dist;
@@ -30,12 +30,12 @@ private:
 	void extractNGTDMData2DAVG(vector<T> &ngtdmData, NGTDM2DAVG<T, R> ngtdmFeatures);
 
 
-	boost::multi_array<double, 2> getNGTDMatrix2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumNeighborHoods, int depth, ConfigFile config);
+	boost::multi_array<float, 2> getNGTDMatrix2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumNeighborHoods, int depth, ConfigFile config);
 public:
-	void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix);
-	void calculateAllNGTDMFeatures2DAVG(NGTDM2DAVG<T, R> &ngtdmFeatures, Image<T, R> imageAttr, boost::multi_array<T, R> sumNeighborHoods, vector<double> spacing, ConfigFile config);
+	void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix);
+	void calculateAllNGTDMFeatures2DAVG(NGTDM2DAVG<T, R> &ngtdmFeatures, Image<T, R> imageAttr, boost::multi_array<T, R> sumNeighborHoods, vector<float> spacing, ConfigFile config);
 	void writeCSVFileNGTDM2DAVG(NGTDM2DAVG<T, R> ngtdm, string outputFolder);
-	void writeOneFileNGTDM2DAVG(NGTDM2DAVG<T, R> ngtdm, string outputFolder);
+	void writeOneFileNGTDM2DAVG(NGTDM2DAVG<T, R> ngtdm, ConfigFile config, int &parameterSpaceNr);
 };
 
 
@@ -50,8 +50,8 @@ In this function the NGTDM is filled.
 The function fills the NGTDMatrix with the corresponding values
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> NGTDM2DAVG<T, R>::getNGTDMatrix2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumNeighborHoods, int depth, ConfigFile config) {
-	typedef boost::multi_array<double, 2>  ngtdmat;
+boost::multi_array<float, 2> NGTDM2DAVG<T, R>::getNGTDMatrix2DAVG(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> sumNeighborHoods, int depth, ConfigFile config) {
+	typedef boost::multi_array<float, 2>  ngtdmat;
 	int sizeMatrix = this->diffGreyLevels.size();
 	ngtdmat NGTDMatrix(boost::extents[sizeMatrix][3]);
 	int indexOfElement[3] = { 0,0,0 };
@@ -92,13 +92,13 @@ boost::multi_array<double, 2> NGTDM2DAVG<T, R>::getNGTDMatrix2DAVG(boost::multi_
 /*
 \brief getProbability
 @param[in] vector<T> elementsOfWholeNeighborhood: vector containing all elements of the neighborhood
-@param[in] boost::multi_array<double, 2> ngtdMatrix: ngtd matrix
+@param[in] boost::multi_array<float, 2> ngtdMatrix: ngtd matrix
 
 The function calculates the probability matrix of the NGTD matrix, as many features are calculated using the probabilities.
 */
 template <class T, size_t R>
-void NGTDM2DAVG<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix) {
-	double numItem = 0;
+void NGTDM2DAVG<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix) {
+	float numItem = 0;
 	for (int actElementIndex = 0; actElementIndex<boost::size(this->diffGreyLevels); actElementIndex++) {
 		numItem += ngtdMatrix[actElementIndex][0];
 	}
@@ -112,22 +112,22 @@ void NGTDM2DAVG<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boo
 
 
 template <class T, size_t R>
-void NGTDM2DAVG<T, R>::calculateAllNGTDMFeatures2DAVG(NGTDM2DAVG<T, R> &ngtdmFeatures, Image<T, R> imageAttr, boost::multi_array<T,R> sumNeighborHoods, vector<double> spacing, ConfigFile config) {
+void NGTDM2DAVG<T, R>::calculateAllNGTDMFeatures2DAVG(NGTDM2DAVG<T, R> &ngtdmFeatures, Image<T, R> imageAttr, boost::multi_array<T,R> sumNeighborHoods, vector<float> spacing, ConfigFile config) {
 	this->diffGreyLevels = imageAttr.diffGreyLevels;
 	//fill these values with the values set by user
 	actualSpacing = spacing;
 	normNGTDM = config.normNGTDM;
 	dist = config.dist;
 
-	double sumCoarseness = 0;
-	double sumContrast = 0;
-	double sumBusyness = 0;
-	double sumComplexity = 0;
-	double sumStrength = 0;
+	float sumCoarseness = 0;
+	float sumContrast = 0;
+	float sumBusyness = 0;
+	float sumComplexity = 0;
+	float sumStrength = 0;
 
 	int totalDepth = imageAttr.imageMatrix.shape()[2];
 	for (int depth = 0; depth < totalDepth; depth++) {
-		boost::multi_array<double, 2> ngtdm = ngtdmFeatures.getNGTDMatrix2DAVG(imageAttr.imageMatrix, sumNeighborHoods, depth, config);
+		boost::multi_array<float, 2> ngtdm = ngtdmFeatures.getNGTDMatrix2DAVG(imageAttr.imageMatrix, sumNeighborHoods, depth, config);
 		ngtdmFeatures.calculateCoarseness(ngtdm);
 
 		sumCoarseness += this->coarseness;
@@ -173,8 +173,14 @@ void NGTDM2DAVG<T, R>::writeCSVFileNGTDM2DAVG(NGTDM2DAVG<T, R> ngtdmFeatures, st
 }
 
 template <class T, size_t R>
-void NGTDM2DAVG<T, R>::writeOneFileNGTDM2DAVG(NGTDM2DAVG<T, R> ngtdmFeatures, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void NGTDM2DAVG<T, R>::writeOneFileNGTDM2DAVG(NGTDM2DAVG<T, R> ngtdmFeatures, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -182,14 +188,38 @@ void NGTDM2DAVG<T, R>::writeOneFileNGTDM2DAVG(NGTDM2DAVG<T, R> ngtdmFeatures, st
 	ofstream ngtdmCSV;
 	ngtdmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	ngtdm.defineNGTDMFeatures2DMRG(features);
 
 	vector<T> ngtdmData;
 	extractNGTDMData2DAVG(ngtdmData, ngtdmFeatures);
-	for (int i = 0; i< ngtdmData.size(); i++) {
-		ngtdmCSV << "ngtdmFeatures2avg" << "," << features[i] << ",";
-		ngtdmCSV << ngtdmData[i];
-		ngtdmCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		ngtdm.defineNGTDMFeatures2DMRG(features);
+		for (int i = 0; i < ngtdmData.size(); i++) {
+			ngtdmCSV << "ngtdmFeatures2avg" << "," << features[i] << ",";
+			ngtdmCSV << ngtdmData[i];
+			ngtdmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		ngtdm.defineNGTDMFeatures2DMRGOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		featSpaceTable << parameterSpaceName << "," << "2DVmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < ngtdmData.size(); i++) {
+			ngtdmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			ngtdmCSV << ngtdmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			ngtdmCSV << "\n";
+		}
+
 	}
 	ngtdmCSV.close();
 }

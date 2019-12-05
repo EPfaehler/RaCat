@@ -16,14 +16,14 @@ This class only contains the calculations of the merged matrix.
 template <class T,  size_t R>
 class GLCMFeatures3DMRG : GLCMFeatures<T, R>{
 private:
-	typedef boost::multi_array<double, 2>  glcmat;
-
+	typedef boost::multi_array<float, 2>  glcmat;
+	GLCMFeatures<T, R> glcm;
 	string normGLCM;
-	vector<double> actualSpacing;
+	vector<float> actualSpacing;
 	void defineGLCMFeatures3DMRG(vector<string> &features);
 	void extractGLCMData3D(vector<T> &glcmData, GLCMFeatures3DMRG<T, R> glcmFeatures);
-	void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int angle, int directionZ);
-	boost::multi_array<double, 2> getMatrixSum(boost::multi_array<T, R> inputMatrix, float maxIntensity);
+	void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int angle, int directionZ);
+	boost::multi_array<float, 2> getMatrixSum(boost::multi_array<T, R> inputMatrix, float maxIntensity);
 	//store different grey levels in vector
 	vector<T> diffGreyLevels;
 
@@ -41,8 +41,8 @@ public:
 	~GLCMFeatures3DMRG() {
 	}
 	void writeCSVFileGLCM3DMRG(GLCMFeatures3DMRG<T, R> glcmFeat, string outputFolder);
-	void writeOneFileGLCM3DMRG(GLCMFeatures3DMRG<T, R> glcmFeat, string outputFolder);
-	void calculateAllGLCMFeatures3DMRG(GLCMFeatures3DMRG<T, R> &glcmFeat, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config);
+	void writeOneFileGLCM3DMRG(GLCMFeatures3DMRG<T, R> glcmFeat, ConfigFile config, int &parameterSpaceNr);
+	void calculateAllGLCMFeatures3DMRG(GLCMFeatures3DMRG<T, R> &glcmFeat, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config);
 };
 
 
@@ -57,7 +57,7 @@ In the method fill3DMatrices the GLCM matrix is filled with the according values
 @param[in]: in directionZ: in which z direction we are going
 */
 template <class T, size_t R>
-void GLCMFeatures3DMRG<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int angle, int directionZ) {
+void GLCMFeatures3DMRG<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int angle, int directionZ) {
 
 	float weight;
 	int directionX;
@@ -88,7 +88,7 @@ In the method getMatrixSum calculates the sum of all calculated GLCM matrices
 @param[out]: boost multi_array: summed GLCM matrices
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLCMFeatures3DMRG<T, R>::getMatrixSum(boost::multi_array<T, R> inputMatrix, float maxIntensity) {
+boost::multi_array<float, 2> GLCMFeatures3DMRG<T, R>::getMatrixSum(boost::multi_array<T, R> inputMatrix, float maxIntensity) {
 
 	int sizeMatrix = maxIntensity;
 
@@ -134,12 +134,12 @@ boost::multi_array<double, 2> GLCMFeatures3DMRG<T, R>::getMatrixSum(boost::multi
 }
 
 template <class T, size_t R>
-void GLCMFeatures3DMRG<T, R>::calculateAllGLCMFeatures3DMRG(GLCMFeatures3DMRG<T, R> &GLCMFeatures3DMRG, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<double> spacing, ConfigFile config) {
+void GLCMFeatures3DMRG<T, R>::calculateAllGLCMFeatures3DMRG(GLCMFeatures3DMRG<T, R> &GLCMFeatures3DMRG, boost::multi_array<T, R> inputMatrix, float maxIntensity, vector<float> spacing, ConfigFile config) {
 	//get which norm should be used in the calculation of the GLCM features
 	normGLCM = config.normGLCM;
 	actualSpacing = spacing;
 
-	boost::multi_array<double, 2> GLCM180 = GLCMFeatures3DMRG.getMatrixSum(inputMatrix, maxIntensity);
+	boost::multi_array<float, 2> GLCM180 = GLCMFeatures3DMRG.getMatrixSum(inputMatrix, maxIntensity);
 
 	GLCMFeatures3DMRG.calculateJointMaximum(GLCM180);
 	GLCMFeatures3DMRG.calculateJointAverage(GLCM180);
@@ -221,8 +221,14 @@ void GLCMFeatures3DMRG<T, R>::writeCSVFileGLCM3DMRG(GLCMFeatures3DMRG<T,R> glcmF
 }
 
 template <class T, size_t R>
-void GLCMFeatures3DMRG<T, R>::writeOneFileGLCM3DMRG(GLCMFeatures3DMRG<T, R> glcmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLCMFeatures3DMRG<T, R>::writeOneFileGLCM3DMRG(GLCMFeatures3DMRG<T, R> glcmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -230,21 +236,45 @@ void GLCMFeatures3DMRG<T, R>::writeOneFileGLCM3DMRG(GLCMFeatures3DMRG<T, R> glcm
 	ofstream glcmCSV;
 	glcmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineGLCMFeatures3DMRG(features);
 
 	vector<T> glcmData;
 	extractGLCMData3D(glcmData, glcmFeat);
-	for (int i = 0; i< glcmData.size(); i++) {
-		glcmCSV << "glcmFeatures3DWmrg" << "," << features[i] << ",";
-		glcmCSV << glcmData[i];
-		glcmCSV << "\n";
+	if (config.csvOutput == 1) {
+		glcm.defineGLCMFeatures(features);
+		for (int i = 0; i < glcmData.size(); i++) {
+			glcmCSV << "glcmFeatures3DWmrg" << "," << features[i] << ",";
+			glcmCSV << glcmData[i];
+			glcmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glcm.defineGLCMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "3Dwmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glcmData.size(); i++) {
+			glcmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glcmCSV << glcmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glcmCSV << "\n";
+		}
+
 	}
 	glcmCSV.close();
 }
 
 template <class T, size_t R>
 void GLCMFeatures3DMRG<T, R>::defineGLCMFeatures3DMRG(vector<string> &features){
-    features.push_back("joint maximun");
+    features.push_back("joint maximum");
     features.push_back("joint average");
     features.push_back("joint variance");
     features.push_back("joint entropy");

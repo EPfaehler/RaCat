@@ -1,6 +1,6 @@
 #include "matrixFunctions.h"
 
-void matrixSum(boost::multi_array<double, 2> &matrix1, boost::multi_array<double, 2> matrix2){
+void matrixSum(boost::multi_array<float, 2> &matrix1, boost::multi_array<float, 2> matrix2){
     for(int i = 0; i<matrix1.shape()[0]; i++){
         for(int j = 0; j<matrix1.shape()[1]; j++){
                 matrix1[i][j]+=matrix2[i][j];
@@ -8,7 +8,7 @@ void matrixSum(boost::multi_array<double, 2> &matrix1, boost::multi_array<double
     }
 }
 
-void inverse(boost::multi_array<double, 2> matrix, boost::multi_array<double, 2> &inverseMatrix){
+void inverse(boost::multi_array<float, 2> matrix, boost::multi_array<float, 2> &inverseMatrix){
     for(int i = 0; i<matrix.shape()[0]; i++){
         for(int j = 0; j<matrix.shape()[1]; j++){
             inverseMatrix[j][i]=matrix[i][j];
@@ -16,7 +16,7 @@ void inverse(boost::multi_array<double, 2> matrix, boost::multi_array<double, 2>
     }
 }
 
-void multSkalarMatrix(boost::multi_array<double, 2> &matrix, double weight){
+void multSkalarMatrix(boost::multi_array<float, 2> &matrix, float weight){
     for(int i = 0; i<matrix.shape()[0]; i++){
         for(int j = 0; j<matrix.shape()[1]; j++){
             matrix[i][j]=weight*matrix[i][j];
@@ -24,7 +24,7 @@ void multSkalarMatrix(boost::multi_array<double, 2> &matrix, double weight){
     }
 }
 
-float calculateWeight2D(int directionX, int directionY, string norm, vector<double> spacing){
+float calculateWeight2D(int directionX, int directionY, string norm, vector<float> spacing){
 	float weight;
     if(!norm.compare("Manhattan") || !norm.compare("manhattan")){
         weight = calculateManhattanNorm2D(directionX, directionY, spacing);
@@ -42,7 +42,7 @@ float calculateWeight2D(int directionX, int directionY, string norm, vector<doub
      return weight;
 }
 
-float calculateWeight3D(int directionX, int directionY, int directionZ, string norm, vector<double> spacing) {
+float calculateWeight3D(int directionX, int directionY, int directionZ, string norm, vector<float> spacing) {
 	float weight;
 	if (!norm.compare("Manhattan") || !norm.compare("manhattan")) {
 		weight = calculateManhattanNorm3D(directionX, directionY, directionZ, spacing);

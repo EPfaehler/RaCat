@@ -30,6 +30,7 @@ class IntensityHistogram : StatisticalFeatures<T,R>{
 		//vector containing the probabilities
         vector<T> probabilities;
 		void getProbabilities(boost::multi_array<T, R> inputMatrix);
+		void getSkewnessKurtosisIntHist();
 		//feature values
         T entropy;
         T mode;
@@ -38,6 +39,8 @@ class IntensityHistogram : StatisticalFeatures<T,R>{
         T maxHistGradGreyValue;
         T minHistGradient;
         T minHistGradGreyValue;
+		T kurtosisInt;
+		T skewnessInt;
         vector<T> vectorOfMatrixElem;
         vector<double> nrElementsH;
         vector<T> diffGreyLevels;
@@ -56,7 +59,7 @@ class IntensityHistogram : StatisticalFeatures<T,R>{
 		void getMaxHistGradient();
 		void getMinHistGradient();
 		void defineIntenseFeatures(vector<string> &features);
-        
+		void defineIntenseFeaturesOntology(vector<string> &features);
 
     public:
 		IntensityHistogram() {
@@ -66,7 +69,7 @@ class IntensityHistogram : StatisticalFeatures<T,R>{
 
 		void calculateAllIntFeatures(IntensityHistogram<T, R> &intense, boost::multi_array<T, R> inputMatrix, vector<T> vectorOfMatrElements, vector<T> diffGrey);
 		void writeCSVFileIntensity(IntensityHistogram<T, R> intensHist, string outputFolder);
-		void writeOneFileIntensity(IntensityHistogram<T, R> intense, string outputFolder);
+		void writeOneFileIntensity(IntensityHistogram<T, R> intense, ConfigFile config);
 };
 
 
@@ -90,7 +93,11 @@ The method getMode calculates the mode of the distribution. \n
 */
 template <class T,  size_t R>
 void IntensityHistogram<T,R>::getMode(){
+	for (int i = 0; i < boost::size(probElements); i++) {
+		std::cout << probElements[i] << " ";
+	}
     int indexMaxProb = distance(probElements.begin(), max_element(probElements.begin(), probElements.end()));
+	sort(vectorOfMatrixElem.begin(), vectorOfMatrixElem.end());
     mode = vectorOfMatrixElem[indexMaxProb];
 }
 
@@ -104,10 +111,13 @@ void IntensityHistogram<T,R>::getNrElements(vector<double> &nrElements){
     vector<T> tempMatrElements = vectorOfMatrixElem;
 	T maxElement = *max_element(tempMatrElements.begin(), tempMatrElements.end());
     int nrActElement;
+	int greyLevelIndex;
     std::sort(tempMatrElements.begin(), tempMatrElements.end());
-    for(int greyLevelIndex = 1; greyLevelIndex < maxElement+1; greyLevelIndex++){
+    for(int nrGreyLevel = 0; nrGreyLevel < this->diffGreyLevels.size(); nrGreyLevel++){
+		greyLevelIndex = this->diffGreyLevels[nrGreyLevel];
         nrActElement = 0;
         for(int matrIndex = 0; matrIndex < tempMatrElements.size(); matrIndex++ ){
+			//std::cout << tempMatrElements[matrIndex] << " ";
             if(tempMatrElements[matrIndex] == greyLevelIndex){
                 nrActElement+=1;
             }
@@ -180,7 +190,7 @@ void IntensityHistogram<T,R>::getMaxHistGradient(){
 	else {
 		maxHistGradient = *max_element(maxHistVecGradient.begin(), maxHistVecGradient.end());
 		maxHistGradGreyValue = max_element(maxHistVecGradient.begin(), maxHistVecGradient.end()) - maxHistVecGradient.begin();
-		maxHistGradGreyValue = diffGreyLevels[maxHistGradGreyValue ];
+		maxHistGradGreyValue = diffGreyLevels[maxHistGradGreyValue +1] ;
 	}
 }
 
@@ -194,23 +204,47 @@ void IntensityHistogram<T,R>::getMinHistGradient(){
 	else {
 		minHistGradient = *min_element(minHistVecGradient.begin(), minHistVecGradient.end());
 		minHistGradGreyValue = min_element(minHistVecGradient.begin(), minHistVecGradient.end()) - minHistVecGradient.begin();
-		minHistGradGreyValue = diffGreyLevels[minHistGradGreyValue] ;
+		minHistGradGreyValue = diffGreyLevels[minHistGradGreyValue + 1] ;
 
 	}
 }
 
+template <class T, size_t R>
+void IntensityHistogram<T, R>::getSkewnessKurtosisIntHist() {
+	
+	vector<T> minusMean;
+	minusMean = vectorOfMatrixElem;
+	transform(minusMean.begin(), minusMean.end(), minusMean.begin(),
+		std::bind2nd(minus<T>(), this->meanValue));
+	skewnessInt = 0;
+	kurtosisInt = 0;
+	float tmpValue = 0;
+	for (int i = 0; i < minusMean.size(); i++) {
+		skewnessInt += pow(minusMean[i], 3);
+		kurtosisInt += pow(minusMean[i], 4);
+		tmpValue += pow(minusMean[i], 2);
+	}
+	float tmpValue2 = tmpValue / minusMean.size();
+	skewnessInt = (skewnessInt / minusMean.size()) / pow(tmpValue2, 1.5);
+	kurtosisInt = (kurtosisInt/minusMean.size())/ pow(tmpValue2, 2) -3;
+	
 
 
-
+}
 
 template <class T,  size_t R>
 
+
+
 void IntensityHistogram<T,R>::calculateAllIntFeatures(IntensityHistogram<T,R> &intense, boost::multi_array<T,R> inputMatrix, vector<T> vectorOfMatrElements, vector<T> diffGrey ){
   this->diffGreyLevels = diffGrey;
+ 
   vectorOfMatrixElem = vectorOfMatrElements;
+  intense.getProbabilities(inputMatrix);
   intense.calculateMean(vectorOfMatrixElem);
   intense.calculateVariance();
   intense.calculateSkewness();
+  getSkewnessKurtosisIntHist();
   intense.calculateKurtosis();
   intense.getMedian(vectorOfMatrixElem);
   intense.getMinimum(vectorOfMatrixElem);
@@ -226,7 +260,7 @@ void IntensityHistogram<T,R>::calculateAllIntFeatures(IntensityHistogram<T,R> &i
   intense.meanAbsoluteDev(vectorOfMatrixElem);
   intense.medianAbsoluteDev(vectorOfMatrixElem);
   intense.getRobustMeanAbsDev(vectorOfMatrixElem);
-  intense.getProbabilities(inputMatrix);
+  
   intense.getEntropy();
   getHistGradient();
   intense.getHistUniformity();
@@ -258,9 +292,15 @@ void IntensityHistogram<T,R>::writeCSVFileIntensity(IntensityHistogram<T,R> inte
 }
 
 template <class T, size_t R>
-void IntensityHistogram<T, R>::writeOneFileIntensity(IntensityHistogram<T, R> intense, string outputFolder)
+void IntensityHistogram<T, R>::writeOneFileIntensity(IntensityHistogram<T, R> intense, ConfigFile config)
 {
-	string csvName = outputFolder + ".csv";
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -268,14 +308,25 @@ void IntensityHistogram<T, R>::writeOneFileIntensity(IntensityHistogram<T, R> in
 	ofstream intenseCSV;
 	intenseCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineIntenseFeatures(features);
+	
 
 	vector<T> intenseData;
 	extractIntenseData(intenseData, intense);
-	for (int i = 0; i< intenseData.size(); i++) {
-		intenseCSV << "Intensity histogram" << "," << features[i] << ",";
-		intenseCSV << intenseData[i];
-		intenseCSV << "\n";
+	if (config.csvOutput == 1) {
+		defineIntenseFeatures(features);
+		for (int i = 0; i < intenseData.size(); i++) {
+			intenseCSV << "Intensity histogram" << "," << features[i] << ",";
+			intenseCSV << intenseData[i];
+			intenseCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		defineIntenseFeaturesOntology(features);
+		for (int i = 0; i < intenseData.size(); i++) {
+			intenseCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			intenseCSV << intenseData[i] << "," << config.featureParameterSpaceName << "," << config.calculationSpaceName;
+			intenseCSV << "\n";
+		}
 	}
 	intenseCSV.close();
 }
@@ -310,13 +361,44 @@ void IntensityHistogram<T,R>::defineIntenseFeatures(vector<string> &features){
 
 }
 
+template <class T, size_t R>
+
+void IntensityHistogram<T, R>::defineIntenseFeaturesOntology(vector<string> &features) {
+
+	features.push_back("Fih.mean");
+	features.push_back("Fih.var");
+	features.push_back("Fih.skew");
+	features.push_back("Fih.kurt");
+	features.push_back("Fih.median");
+	features.push_back("Fih.min");
+	features.push_back("Fih.P10");
+	features.push_back("Fih.P90");
+	features.push_back("Fih.max");
+	features.push_back("Fih.mode");
+	features.push_back("Fih.iqr");
+	features.push_back("Fih.range");
+	features.push_back("Fih.mad");
+	features.push_back("Fih.rmad");
+	features.push_back("Fih.medad");
+	features.push_back("Fih.cov");
+	features.push_back("Fih.qcod");
+	features.push_back("Fih.entropy");
+	features.push_back("Fih.uniformity");
+	features.push_back("Fih.energy");
+	features.push_back("Fih.max.grad");
+	features.push_back("Fih.max.grad.gl");
+	features.push_back("Fih.min.grad");
+	features.push_back("Fih.min.grad.gl");
+
+}
+
 template <class T,  size_t R>
 
 void IntensityHistogram<T,R>::extractIntenseData(vector<T> &intenseData, IntensityHistogram<T, R> intenseFeatures){
     intenseData.push_back(intenseFeatures.meanValue);
     intenseData.push_back(intenseFeatures.varianceValue);
-    intenseData.push_back(intenseFeatures.skewnessValue);
-    intenseData.push_back(intenseFeatures.kurtosisValue);
+    intenseData.push_back(intenseFeatures.skewnessInt);
+    intenseData.push_back(intenseFeatures.kurtosisInt);
     intenseData.push_back(intenseFeatures.medianValue);
     intenseData.push_back(intenseFeatures.minimumValue);
 	intenseData.push_back(intenseFeatures.percentile10);

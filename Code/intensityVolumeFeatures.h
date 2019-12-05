@@ -24,7 +24,8 @@ class IntensityVolumeFeatures{
         T maxGreyLevel;
         T minGreyLevel;
         vector<T> greyLevelFraction;
-        vector<T> fracVolume;
+        vector<T> fracVolume; 
+		vector<T> intensityVector;
 
         T volAtIntFrac10;
         T volAtIntFrac90;
@@ -37,6 +38,7 @@ class IntensityVolumeFeatures{
         T getVolumeAtIntFraction(double percent);
         T getIntAtVolFraction(double percent, vector<T> diffGreyLevels);
         void defineIntVolFeatures(vector<string> &features);
+		void defineIntVolFeaturesOntology(vector<string> &features);
         void extractIntVolData(vector<T> &intVolData, IntensityVolumeFeatures<T, R> intVolFeatures);
 
     public:
@@ -50,7 +52,7 @@ class IntensityVolumeFeatures{
         void getGreyLevelFraction(boost::multi_array<T,R> inputMatrix);
         void calculateAllIntensVolFeatures(IntensityVolumeFeatures<T,R> &intVolFeatures, boost::multi_array<T, R> inputMatrix, vector<T> vectorMatrElem);
         void writeCSVFileIntVol(IntensityVolumeFeatures<T,R> intVol, string outputFolder);
-		void writeOneFileIntVol(IntensityVolumeFeatures<T, R> intVol, string outputFolder);
+		void writeOneFileIntVol(IntensityVolumeFeatures<T, R> intVol, ConfigFile config);
 };
 
 
@@ -61,30 +63,30 @@ The vector fractional volume vector is filled in this function
 @parameter[in] vectorMatrElemen: vector containing all grey levels of VOI
 */
 template <class T, size_t R>
-void IntensityVolumeFeatures<T, R>::getFractionalVolume(boost::multi_array<T,R> inputMatrix, vector<T> vectorMatrElem){
-    T actFracVolume;
-    double nrElementsSmaller;
+void IntensityVolumeFeatures<T, R>::getFractionalVolume(boost::multi_array<T, R> inputMatrix, vector<T> vectorMatrElem) {
+	T actFracVolume;
+	double nrElementsSmaller;
 	double nrElementsNotNAN;
 
-    for(int greyLevel = minGreyLevel; greyLevel < maxGreyLevel + 1; greyLevel ++){
-        nrElementsSmaller = 0;
+	for (int greyLevel = minGreyLevel; greyLevel < maxGreyLevel + 1; greyLevel++) {
+		nrElementsSmaller = 0;
 		nrElementsNotNAN = 0;
-        for(int depth = 0; depth < inputMatrix.shape()[2]; depth++){
-            for(int rows = 0; rows < inputMatrix.shape()[0]; rows++){
-                for(int col = 0; col < inputMatrix.shape()[1]; col++){
-					if(inputMatrix[rows][col][depth] < greyLevel && !isnan(inputMatrix[rows][col][depth])){
+		for (int depth = 0; depth < inputMatrix.shape()[2]; depth++) {
+			for (int rows = 0; rows < inputMatrix.shape()[0]; rows++) {
+				for (int col = 0; col < inputMatrix.shape()[1]; col++) {
+					if (inputMatrix[rows][col][depth] < greyLevel && !isnan(inputMatrix[rows][col][depth])) {
 						//std::cout << inputMatrix[rows][col][depth] << std::endl;
-                        nrElementsSmaller += 1;
-                    }
+						nrElementsSmaller += 1;
+					}
 					if (!isnan(inputMatrix[rows][col][depth])) {
 						nrElementsNotNAN += 1;
 					}
-                }
-            }
-        }
-        actFracVolume = 1 - nrElementsSmaller/nrElementsNotNAN;
-        fracVolume.push_back(actFracVolume);
-    }
+				}
+			}
+		}
+		actFracVolume = 1 - nrElementsSmaller / nrElementsNotNAN;
+		fracVolume.push_back(actFracVolume);
+	}
 
 }
 
@@ -94,13 +96,13 @@ In the function getGreyLevelFraction the grey level fraction is calculated and a
 @parameter[in] vectorMatrElemen: vector containing all grey levels of VOI
 */
 template <class T, size_t R>
-void IntensityVolumeFeatures<T, R>::getGreyLevelFraction(boost::multi_array<T,R> inputMatrix){
-    T actGreyLevelFraction;
+void IntensityVolumeFeatures<T, R>::getGreyLevelFraction(boost::multi_array<T, R> inputMatrix) {
+	T actGreyLevelFraction;
 
-    for(int actGreyLevel = minGreyLevel; actGreyLevel < maxGreyLevel + 1; actGreyLevel++){
-        actGreyLevelFraction = (actGreyLevel - minGreyLevel)/(maxGreyLevel - minGreyLevel);
-        greyLevelFraction.push_back(actGreyLevelFraction);
-    }
+	for (int actGreyLevel = minGreyLevel; actGreyLevel < maxGreyLevel + 1; actGreyLevel++) {
+		actGreyLevelFraction = (actGreyLevel - minGreyLevel) / (maxGreyLevel - minGreyLevel);
+		greyLevelFraction.push_back(actGreyLevelFraction);
+	}
 
 }
 
@@ -109,15 +111,15 @@ In the function getVolumeAtIntFraction calculates the volume at a certain intens
 @parameter[in] double percent: percentage value for which the volume fraction is calculated
 */
 template <class T, size_t R>
-T IntensityVolumeFeatures<T, R>::getVolumeAtIntFraction(double percent){
-    vector<T> tempVector = greyLevelFraction;
-    typename vector<T>::iterator it;
-    typename vector<T>::iterator greaterThan;
-    greaterThan = remove_if(tempVector.begin(), tempVector.end(), bind2nd(less<T>(), percent));
-    tempVector.erase(greaterThan, tempVector.end());
-    it=find(greyLevelFraction.begin(),greyLevelFraction.end(),tempVector[0]);
-    int pos = distance(greyLevelFraction.begin(), it);
-    return fracVolume[pos];
+T IntensityVolumeFeatures<T, R>::getVolumeAtIntFraction(double percent) {
+	vector<T> tempVector = greyLevelFraction;
+	typename vector<T>::iterator it;
+	typename vector<T>::iterator greaterThan;
+	greaterThan = remove_if(tempVector.begin(), tempVector.end(), bind2nd(less<T>(), percent));
+	tempVector.erase(greaterThan, tempVector.end());
+	it = find(greyLevelFraction.begin(), greyLevelFraction.end(), tempVector[0]);
+	int pos = distance(greyLevelFraction.begin(), it);
+	return fracVolume[pos];
 }
 
 
@@ -126,10 +128,10 @@ In the function getIntAtVolFraction calculates the intensity at a certain volume
 @parameter[in] double percent: percentage value for which the volume fraction is calculated
 */
 template <class T, size_t R>
-T IntensityVolumeFeatures<T, R>::getIntAtVolFraction(double percent, vector<T> diffGreyLevels){
-    vector<T> tempVector = fracVolume;
-    typename vector<T>::iterator it;
-    typename vector<T>::iterator greaterThan;
+T IntensityVolumeFeatures<T, R>::getIntAtVolFraction(double percent, vector<T> diffGreyLevels) {
+	vector<T> tempVector = fracVolume;
+	typename vector<T>::iterator it;
+	typename vector<T>::iterator greaterThan;
 
 	int pos;
 	if (tempVector[boost::size(tempVector) - 1] < percent) {
@@ -147,37 +149,39 @@ T IntensityVolumeFeatures<T, R>::getIntAtVolFraction(double percent, vector<T> d
 
 }
 
-
 template <class T, size_t R>
 void IntensityVolumeFeatures<T, R>::calculateAllIntensVolFeatures(IntensityVolumeFeatures<T,R> &intVolFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGreyLevels){
-	maxGreyLevel = 0;
-	minGreyLevel = 10000000;
+	
+	vector<T> elementVector;
 	for (int depth = 0; depth < inputMatrix.shape()[2]; depth++) {
-		for (int rows = 0; rows < inputMatrix.shape()[0]; rows++) {
+		for (int row = 0; row < inputMatrix.shape()[0]; row++) {
 			for (int col = 0; col < inputMatrix.shape()[1]; col++) {
-				if (inputMatrix[rows][col][depth] >maxGreyLevel) {
-					maxGreyLevel = inputMatrix[rows][col][depth];
-				}
-				if (inputMatrix[rows][col][depth]<minGreyLevel){
-					minGreyLevel = inputMatrix[rows][col][depth];
+				if (!std::isnan(inputMatrix[row][col][depth])) {
+					elementVector.push_back(inputMatrix[row][col][depth]);
 				}
 			}
 		}
 	}
-	if (maxGreyLevel != minGreyLevel) {
-		intVolFeatures.getFractionalVolume(inputMatrix, diffGreyLevels);
-		intVolFeatures.getGreyLevelFraction(inputMatrix);
-		volAtIntFrac10 = intVolFeatures.getVolumeAtIntFraction(0.1);
-		volAtIntFrac90 = intVolFeatures.getVolumeAtIntFraction(0.9);
-		intAtVolFrac10 = intVolFeatures.getIntAtVolFraction(0.1, diffGreyLevels);
-		intAtVolFrac90 = intVolFeatures.getIntAtVolFraction(0.9, diffGreyLevels);
+	maxGreyLevel = *max_element(elementVector.begin(), elementVector.end());
+	minGreyLevel = *min_element(elementVector.begin(), elementVector.end());
+	std::cout << "minMax" << minGreyLevel << " " << maxGreyLevel << std::endl;
+	vector<T> temGreyLevels;
+	//get Grey Levels which are not NAN
+	std::copy(elementVector.begin(), elementVector.end(), back_inserter(temGreyLevels));
+	//sort the vector and extract every element exactly once
+	std::sort(temGreyLevels.begin(), temGreyLevels.end());
+	auto it = std::unique(temGreyLevels.begin(), temGreyLevels.end());
+	temGreyLevels.resize(std::distance(temGreyLevels.begin(), it));
+	intVolFeatures.getFractionalVolume(inputMatrix, temGreyLevels);
+	intVolFeatures.getGreyLevelFraction(inputMatrix);
+	volAtIntFrac10 = intVolFeatures.getVolumeAtIntFraction(0.1);
+	volAtIntFrac90 = intVolFeatures.getVolumeAtIntFraction(0.9);
+	intAtVolFrac10 = intVolFeatures.getIntAtVolFraction(0.1, temGreyLevels);
+	intAtVolFrac90 = intVolFeatures.getIntAtVolFraction(0.9, temGreyLevels);
 
-		diffIntAtVolFrac = abs(intAtVolFrac90 - intAtVolFrac10);
-		diffVolAtIntFrac = abs(volAtIntFrac90 - volAtIntFrac10);
-	}
-	else {
-		std::cout << "The max and min value of the VOI are the same, the volume intensity features cannot be calculated." << std::endl;
-	}
+	diffIntAtVolFrac = abs(intAtVolFrac90 - intAtVolFrac10);
+	diffVolAtIntFrac = abs(volAtIntFrac90 - volAtIntFrac10);
+	
 }
 
 template <class T, size_t R>
@@ -204,8 +208,14 @@ void IntensityVolumeFeatures<T, R>::writeCSVFileIntVol(IntensityVolumeFeatures<T
 }
 
 template <class T, size_t R>
-void IntensityVolumeFeatures<T, R>::writeOneFileIntVol(IntensityVolumeFeatures<T, R> intVol, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void IntensityVolumeFeatures<T, R>::writeOneFileIntVol(IntensityVolumeFeatures<T, R> intVol, ConfigFile config) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1){
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -213,16 +223,28 @@ void IntensityVolumeFeatures<T, R>::writeOneFileIntVol(IntensityVolumeFeatures<T
 	ofstream intVolCSV;
 	intVolCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineIntVolFeatures(features);
+	
 
 	vector<T> intVolData;
 	extractIntVolData(intVolData, intVol);
-	for (int i = 0; i< intVolData.size(); i++) {
-		intVolCSV << "intensity volume" << "," << features[i] << ",";
-		intVolCSV << intVolData[i];
-		intVolCSV << "\n";
+	if (config.csvOutput == 1) {
+		defineIntVolFeatures(features);
+		for (int i = 0; i < intVolData.size(); i++) {
+			intVolCSV << "intensity volume" << "," << features[i] << ",";
+			intVolCSV << intVolData[i];
+			intVolCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		defineIntVolFeaturesOntology(features);
+		for (int i = 0; i < intVolData.size(); i++) {
+			intVolCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			intVolCSV << intVolData[i] << "," << config.featureParameterSpaceName << "," << config.calculationSpaceName;
+			intVolCSV << "\n";
+		}
 	}
 	intVolCSV.close();
+
 }
 
 template <class T, size_t R>
@@ -235,6 +257,17 @@ void IntensityVolumeFeatures<T, R>::defineIntVolFeatures(vector<string> &feature
     features.push_back("difference int at volume fraction");
    
 
+}
+
+template <class T, size_t R>
+void IntensityVolumeFeatures<T, R>::defineIntVolFeaturesOntology(vector<string> &features) {
+	features.push_back("Fivh.V10");
+	features.push_back("Fivh.V90");
+	features.push_back("Fivh.I10");
+	features.push_back("Fivh.I90");
+	features.push_back("Fivh.V10minusV90");
+	features.push_back("Fivh.I10minusI90");
+	
 }
 
 template <class T, size_t R>

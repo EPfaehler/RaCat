@@ -17,11 +17,11 @@ template <class T,  size_t R>
 class GLCMFeatures3DWMerge : GLCMFeatures<T, R>{
     private:
         int sizeMatrix;
-        typedef boost::multi_array<double, 2>  glcmat;
+        typedef boost::multi_array<float, 2>  glcmat;
         void defineGLCMFeatures3DWMerge(vector<string> &features);
         void extractGLCMData3D(vector<T> &glcmData, GLCMFeatures3DWMerge<T, R> glcmFeatures);
-        void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &sum, int angle, int directionZ);
-        boost::multi_array<double, 2> getMatrixSum( boost::multi_array<T, R> inputMatrix, int ang, int directionZ);
+        void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &sum, int angle, int directionZ);
+        boost::multi_array<float, 2> getMatrixSum( boost::multi_array<T, R> inputMatrix, int ang, int directionZ);
         //store different grey levels in vector
         vector<T> diffGreyLevels;
         vector<T> diagonalProbabilities;
@@ -95,7 +95,7 @@ In the method fill3DMatrices the matrix is filled for all directions
 The function works analog to the 2D method
 */
 template <class T, size_t R>
-void GLCMFeatures3DWMerge<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int angle, int directionZ){
+void GLCMFeatures3DWMerge<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int angle, int directionZ){
      std::vector<std::pair<T, T> > neighbours;
      //get the vector of the nieghbour pairs
      neighbours = getNeighbours3D(inputMatrix, angle, directionZ);
@@ -120,7 +120,7 @@ In the method getMatrixSum calculates the sum from one GLCM matrix and its inver
 @param[in] directionZ: determines the direction in the depth
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLCMFeatures3DWMerge<T,R>::getMatrixSum( boost::multi_array<T, R> inputMatrix, int ang, int directionZ){
+boost::multi_array<float, 2> GLCMFeatures3DWMerge<T,R>::getMatrixSum( boost::multi_array<T, R> inputMatrix, int ang, int directionZ){
 
     glcmat GLCMatrix(boost::extents[sizeMatrix][sizeMatrix]);
 
@@ -246,7 +246,7 @@ void GLCMFeatures3DWMerge<T, R>::calculateAllGLCMFeatures3DWMerge(GLCMFeatures3D
 
     else{
         directionZ=1;
-            boost::multi_array<double,2> GLCMatrix=glcmFeatures.getMatrixSum(inputMatrix, ang, directionZ);
+            boost::multi_array<float,2> GLCMatrix=glcmFeatures.getMatrixSum(inputMatrix, ang, directionZ);
 
             inverse(GLCMatrix, inverseMatrix);
             sum = GLCMatrix;

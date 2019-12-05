@@ -48,6 +48,7 @@
 #include <gdcmAttribute.h>
 #include <gdcmSequenceOfItems.h>
 #include <gdcmFileMetaInformation.h>
+#include <itkFlipImageFilter.h>
 
 namespace itkTypes {
 	typedef itk::Image< float, 3 > ImageType;
@@ -71,13 +72,13 @@ namespace itkTypes {
 	typedef itk::LinearInterpolateImageFunction<ImageType, float> LinearInterpolatorType;
 
 	typedef itk::LinearInterpolateImageFunction<ImageType, double> InterpolatorType;
-	typedef itk::BSplineInterpolateImageFunction<ImageType, double, double> T_Interpolator;
+	typedef itk::BSplineInterpolateImageFunction<ImageType, float, float> T_Interpolator;
 	typedef itk::ResampleImageFilter<ImageType, ImageType>    ResampleFilterType;
-	typedef itk::AffineTransform <double, 3> TransformType;
+	typedef itk::AffineTransform <float, 3> TransformType;
 	typedef itk::ImageRegionConstIterator< ImageType > ConstIteratorType;
 
 	//typedef to read RTstruct
-	typedef itk::Point< double, 3 > PointType;
+	typedef itk::Point< float, 3 > PointType;
 
 	typedef itk::PolygonSpatialObject<2> PolygonType;
 	typedef PolygonType::Pointer PolygonPointer;

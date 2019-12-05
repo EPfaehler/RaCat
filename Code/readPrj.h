@@ -4,6 +4,8 @@
 #include "readImages.h"
 #include "featureCalculation.h"
 #include "itkTypes.h"
+
+ImageType::Pointer reorderFile(ImageType::Pointer imageVoiFile, unsigned int* imageSize, float *voxelSize);
 //functions to read accurate files
 ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float *voxelSize);
 //read the file into array and stores it as ITK image

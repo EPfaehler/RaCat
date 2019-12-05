@@ -18,9 +18,9 @@ class GLCMFeatures2DWOMerge : GLCMFeatures<T,R>  {
         int sizeMatrix;
 
         void extractGLCMDataWOMerge(vector<T> &glcmData, GLCMFeatures2DWOMerge<T, R> glcmFeatures);
-        void fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int depth, int angle);
+        void fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int depth, int angle);
         std::vector<std::pair<T, T> > getNeighbours2D(boost::multi_array<T, R> inputMatrix, int depth, int angle);
-        boost::multi_array<double, 2> calculateMatrix2DWOMerge( boost::multi_array<T, R> inputMatrix, int depth, int angle);
+        boost::multi_array<float, 2> calculateMatrix2DWOMerge( boost::multi_array<T, R> inputMatrix, int depth, int angle);
 
         vector<T> diagonalProbabilities;
         vector<T> crossProbabilities;
@@ -50,8 +50,8 @@ for the occurence of every neighbor pair.
 @param[out]: GLCM-matrix
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLCMFeatures2DWOMerge<T,R>::calculateMatrix2DWOMerge( boost::multi_array<T, R> inputMatrix, int depth, int angle){
-    typedef boost::multi_array<double, 2> glcmat;
+boost::multi_array<float, 2> GLCMFeatures2DWOMerge<T,R>::calculateMatrix2DWOMerge( boost::multi_array<T, R> inputMatrix, int depth, int angle){
+    typedef boost::multi_array<float, 2> glcmat;
 
     glcmat GLCMatrix(boost::extents[sizeMatrix][sizeMatrix]);
 
@@ -76,7 +76,7 @@ As next step, the GLCMatrix is filled: for every neighborpair the position in th
 the value on this position of the GLCMatrix is increased +1
 */
 template <class T, size_t R>
-void GLCMFeatures2DWOMerge<T, R>::fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix, int depth, int angle){
+void GLCMFeatures2DWOMerge<T, R>::fill2DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix, int depth, int angle){
     //vector in which all neihbor pairs are stored
      std::vector<std::pair<T, T> > neighbours;
      //fill this vector
@@ -172,9 +172,9 @@ void GLCMFeatures2DWOMerge<T, R>::calculateAllGLCMFeatures2DWOMerge(GLCMFeatures
     for(int depth = 0; depth < totalDepth; depth++){
         for(int i = 0; i < 4; i++){
           ang = 180-i*45;
-          boost::multi_array<double,2> sum(boost::extents[sizeMatrix][sizeMatrix]) ;
-          boost::multi_array<double,2> inverseMatrix(boost::extents[sizeMatrix][sizeMatrix]);
-          boost::multi_array<double,2> GLCMatrix = glcmFeatures.calculateMatrix2DWOMerge(inputMatrix, depth, ang);
+          boost::multi_array<float,2> sum(boost::extents[sizeMatrix][sizeMatrix]) ;
+          boost::multi_array<float,2> inverseMatrix(boost::extents[sizeMatrix][sizeMatrix]);
+          boost::multi_array<float,2> GLCMatrix = glcmFeatures.calculateMatrix2DWOMerge(inputMatrix, depth, ang);
 
           sum = GLCMatrix;
           inverse(GLCMatrix, inverseMatrix);

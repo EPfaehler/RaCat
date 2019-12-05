@@ -1,6 +1,51 @@
+ImageType::Pointer reorderFile(ImageType::Pointer imageVoiFile) {
+	const typename ImageType::RegionType regionFilter = imageVoiFile->GetLargestPossibleRegion();
+	const typename ImageType::SizeType imageSizeFilter = regionFilter.GetSize();
+	unsigned int imageSize[3] = { imageSizeFilter[0], imageSizeFilter[1],imageSizeFilter[2] };
+	const typename ImageType::SpacingType& inputSpacing = imageVoiFile->GetSpacing();
+	float voxelSize[3] = { inputSpacing [0], inputSpacing [1], inputSpacing[2]};
+	boost::multi_array<float, 3> A(boost::extents[imageSize[0]][imageSize[1]][imageSize[2]]);
+	int row = 0;
+	int depth = 0;
+	int col = 0;
+	int actPosition = 0;
+	//std::cout << "max mask" << maxValueInMask << std::endl;
+	while (actPosition < imageSize[0] * imageSize[1] * imageSize[2]) {
+		if (row < imageSize[0] && depth < imageSize[2]) {
+
+			A[row][col][depth] = imageVoiFile->GetBufferPointer()[actPosition];
+				
+			row = row + 1;
+		}
+
+		if (row == imageSize[0] && col < imageSize[1]) {
+			col = col + 1;
+			row = 0;
+		}
+		if (col == imageSize[1] && depth < imageSize[2]) {
+			col = 0;
+			depth = depth + 1;
+		}
+		actPosition += 1;
+	}
+	vector<float> reorder;
+	for (int row = 0; row < imageSize[0]; row++) {
+		for (int col = 0; col < imageSize[1]; col++) {
+			for (int depth = 0; depth < imageSize[2]; depth++) {
+				reorder.push_back(A[imageSize[0] - row-1][col][imageSize[2] - depth-1]);
+			}
+		}
+	}
+	std::cout << "TESTEST" << boost::size(reorder) << std::endl;
+	float *voiArray = &reorder[0];
+
+	ImageType::Pointer reorderedImage = converArray2Image(voiArray, imageSize, voxelSize);
+	return reorderedImage;
+}
+
 //convert an array to an ITK image
 ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float *voxelSize) {
-
+	
 	ImageType::Pointer finalImage;
 	//write the array in image
 	ImportFilterType::Pointer importFilter = ImportFilterType::New();
@@ -9,6 +54,7 @@ ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float
 	size[0] = dim[0];
 	size[1] = dim[1];
 	size[2] = dim[2];
+
 
 	int nrVoxelsPET = dim[0] * dim[1] * dim[2];
 	//start with importing the image
@@ -20,24 +66,56 @@ ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float
 	region.SetSize(size);
 	importFilter->SetRegion(region);
 
-	const itk::SpacePrecisionType origin[3] = { 0, 0, 0 };
-	const itk::SpacePrecisionType spacing[3] = { voxelSize[0], voxelSize[1], voxelSize[2] };
+	float centerX = float((voxelSize[0] * dim[0]) / 2.0);
+	float centerY = float((voxelSize[1] * dim[1]) / 2.0);
 
+	float centerZ = float((voxelSize[2] * dim[2]) / 2.0);
+	const itk::SpacePrecisionType origin[3] = { centerX, centerY, -centerZ };
+	const itk::SpacePrecisionType spacing[3] = { voxelSize[0], voxelSize[1], voxelSize[2] };
+	//const itk::SpacePrecisionType direction[3] = { voxelSize[0], voxelSize[1], voxelSize[2] };
+	//direction matrix in compliance with standard nifti files from UMCG
+	/*using MatrixType = itk::Matrix<double, 3, 3>;
+	MatrixType matrix;
+	matrix[0][0] = 1;
+	matrix[0][1] = 0;
+	matrix[0][2] = 0.;
+
+	matrix[1][0] = 0;
+	matrix[1][1] = -1;
+	matrix[1][2] = 0.;
+
+	matrix[2][0] = 0;
+	matrix[2][1] = 0;
+	matrix[2][2] = 1;*/
+	
 	importFilter->SetOrigin(origin);
 	importFilter->SetSpacing(spacing);
+	//importFilter->SetDirection(matrix);
 	const bool importImageFilterWillOwnTheBuffer = true;
-	
 	importFilter->SetImportPointer(imageArray, nrVoxelsPET, importImageFilterWillOwnTheBuffer);
 	importFilter->Update();
-	
+
 	finalImage = importFilter->GetOutput();
 	finalImage->Register();
-	return finalImage.GetPointer();
+	
+	using FlipImageFilterType = itk::FlipImageFilter<ImageType>;
+	FlipImageFilterType::Pointer flipFilter = FlipImageFilterType::New();
+	flipFilter->SetInput(finalImage);
+	FlipImageFilterType::FlipAxesArrayType flipAxes;
+	flipAxes[0] = false;
+	flipAxes[1] = true;
+	flipAxes[2] = false;
+	flipFilter->SetFlipAxes(flipAxes);
+	flipFilter->Update();
+
+	return flipFilter->GetOutput();
 }
 
 
+
+
 //the project file of the accurate tool is read in
-ImageType::Pointer readPrjFilePET(string prjPath, string imageType, float smoothingKernel, unsigned int(&dimPET)[3], float (&voxelSize)[3]) {
+ImageType::Pointer readPrjFilePET(string prjPath, string imageType, float smoothingKernel, unsigned int(&dimPET)[3], float(&voxelSize)[3]) {
 	//help array to read in the integer byte
 	unsigned int dimCT[3];
 	float voxelSizeCT[3];
@@ -66,12 +144,13 @@ ImageType::Pointer readPrjFilePET(string prjPath, string imageType, float smooth
 			PETimage = converArray2Image(arr, dimPET, voxelSize);
 			PETimage->Update();
 		}
-		
+
 		//else get arrat with CT values
 		else if (imageType == "CT") {
 			getImageValues(prjfile, ctVector);
 			float *arr = &ctVector[0];
 			PETimage = converArray2Image(arr, dimCT, voxelSizeCT);
+			std::cout << "image PET" << std::endl;
 			PETimage->Update();
 		}
 		else {
@@ -90,7 +169,7 @@ ImageType::Pointer readPrjFilePET(string prjPath, string imageType, float smooth
 		PETimage = flipFilter->GetOutput();
 		PETimage->Update();
 		if (smoothingKernel > 0) {
-			
+
 			PETimage = smoothImage(PETimage, smoothingKernel);
 		}
 		prjfile.close();
@@ -106,32 +185,29 @@ void getHalfLifeScale(ifstream &inFile, float &halfLife, float &volumeScale, flo
 }
 
 void getImageValues(ifstream &inFile, vector<float> &imageArray) {
-	for (int i = 0; i <boost::size(imageArray); i++) {
+	for (int i = 0; i < boost::size(imageArray); i++) {
 		inFile.read((char*)&imageArray[i], sizeof(float));
 	}
 }
 //get the dimension of the image
 void getImageDimension(ifstream &inFile, unsigned int(&dim)[3]) {
-	
-	
-	/*unsigned char charArray[15];
-	for (int i = 0; i < 10; i++) {
-		inFile >> charArray[i];
-	}*/
-	int tmp1, tmp2, tmp3, tmp4;
-	for (int i = 0; i < 3; i++) {
-		//inFile >> tmp1;
-		//inFile >> tmp2;
-		inFile.read((char*)&dim[i], sizeof(short));
-				
-	}
 
+
+	short test[3];
+	for (int i = 0; i < 3; i++) {
+	
+		
+		inFile.read((char*)&test[i], sizeof(short));
+
+	}
+	dim[0] = int(test[0]);
+	dim[1] = int(test[1]);
+	dim[2] = int(test[2]);
 }
 //get voxel size of PET/CT image
 void getVoxelSize(ifstream &inFile, float(&voxelSize)[3]) {
 	for (int i = 0; i < 3; i++) {
 		inFile.read((char*)&voxelSize[i], sizeof(float));
 	}
-	
-}
 
+}

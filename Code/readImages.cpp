@@ -12,6 +12,8 @@ ImageType::Pointer readImage(string imageName) {
 	catch (itk::ExceptionObject &excp) {
 		std::cerr << excp << std::endl;
 	}
+	ImageType::Pointer image = reader->GetOutput();
+
 	return  reader->GetOutput();
 }
 
@@ -119,7 +121,7 @@ That is necessary, as I need the image size to determine the size of the boost::
 @param[in]: ConfigFile config: config file with all information of the config.ini file
 @param[out]: vector<unsigned int> newImageSize: image size after interpolation
 */
-vector<int> getImageSizeInterpolated(ImageType *imageFiltered, ImageType::SizeType imageSize, double (&outputSpacing)[3], ConfigFile config) {
+vector<int> getImageSizeInterpolated(ImageType *imageFiltered, ImageType::SizeType imageSize, double(&outputSpacing)[3], ConfigFile config) {
 
 	const typename ImageType::SpacingType& inputSpacing = imageFiltered->GetSpacing();
 #ifdef _WIN32
@@ -141,15 +143,15 @@ vector<int> getImageSizeInterpolated(ImageType *imageFiltered, ImageType::SizeTy
 		outputSpacing[1] = minimum;
 		if (config.interpolation2D == 0) {
 			outputSpacing[2] = minimum;
-			newImageSize[2] = (double)imageSize[2] * inputSpacing[2] / minimum;
+			newImageSize[2] = (float)imageSize[2] * inputSpacing[2] / minimum;
 		}
 		else {
 			outputSpacing[2] = inputSpacing[2];
-			newImageSize[2] = (double)imageSize[2];
+			newImageSize[2] = (float)imageSize[2];
 		}
 		//calculate now the new image size
-		newImageSize[0] = (double)imageSize[0] * inputSpacing[0] / minimum;
-		newImageSize[1] = (double)imageSize[1] * inputSpacing[1] / minimum;
+		newImageSize[0] = (float)imageSize[0] * inputSpacing[0] / minimum;
+		newImageSize[1] = (float)imageSize[1] * inputSpacing[1] / minimum;
 		
 	}
 	//if the image should  be up sampled, we use the maximum spacing value
@@ -165,36 +167,35 @@ vector<int> getImageSizeInterpolated(ImageType *imageFiltered, ImageType::SizeTy
 		outputSpacing[0] = maximum;
 		outputSpacing[1] = maximum;
 		//get the new image size
-		newImageSize[0] = (double)imageSize[0] * inputSpacing[0] / maximum;
-		newImageSize[1] = (double)imageSize[1] * inputSpacing[1] / maximum;
+		newImageSize[0] = (float)imageSize[0] * inputSpacing[0] / maximum;
+		newImageSize[1] = (float)imageSize[1] * inputSpacing[1] / maximum;
 		if (config.interpolation2D == 0) {
 			outputSpacing[2] = maximum;
-			newImageSize[2] = (double)imageSize[2] * inputSpacing[2] / maximum;
+			newImageSize[2] = (float)imageSize[2] * inputSpacing[2] / maximum;
 		}
 		else {
 			outputSpacing[2] = inputSpacing[2];
-			newImageSize[2] = (double)imageSize[2] ;
+			newImageSize[2] = (float)imageSize[2] ;
 		}
 		
 		
 	}
-	else if (config.useSampling2mm == 1) {
-		outputSpacing[0] = double(2.0);
-		outputSpacing[1] = double(2.0);
-		newImageSize[0] = ceil((double)imageSize[0] * inputSpacing[0] / double(2.0));
-		newImageSize[1] = ceil((double)imageSize[1] * inputSpacing[1] / double(2.0));
+	else if (config.useSamplingCubic == 1) {
+		outputSpacing[0] = float(config.cubicVoxelSize);
+		outputSpacing[1] = float(config.cubicVoxelSize);
+		newImageSize[0] = ceil((float)imageSize[0] * inputSpacing[0] / float(config.cubicVoxelSize));
+		newImageSize[1] = ceil((float)imageSize[1] * inputSpacing[1] / float(config.cubicVoxelSize));
 		if (config.interpolation2D == 0) {
-			outputSpacing[2] = double(2.0);
-			newImageSize[2] = ceil((double)imageSize[2] * inputSpacing[2] / double(2.0));
+			outputSpacing[2] = float(config.cubicVoxelSize);
+			newImageSize[2] = ceil((float)imageSize[2] * inputSpacing[2] / float(config.cubicVoxelSize));
 		}
 		else {
 			outputSpacing[2] = inputSpacing[2];
-			newImageSize[2] = (double)imageSize[2];
+			newImageSize[2] = (float)imageSize[2];
 		}
 		
 		
 	}
-	std::cout << "newIm" << newImageSize[0] << " " << newImageSize[1] << " " << newImageSize[2] << std::endl;
 	return newImageSize;
 }
 
@@ -208,7 +209,9 @@ As the function getBoundingBox region only regards 1 as inside the mask, we have
 */
 ImageType::Pointer maskValues2One(ImageType *originalMask) {
 	Image<float, 3> tmpImage(1, 1, 1);
-	int valueInMask = tmpImage.getValueInMask(originalMask);
+	float valueInMask = tmpImage.getValueInMask(originalMask);
+	float thresholdValue = 0.5*valueInMask;
+	std::cout <<"!!!"<< valueInMask<<0.5*valueInMask << std::endl;
 	const typename ImageType::SpacingType& inputSpacing = originalMask->GetSpacing();
 	const typename ImageType::RegionType& inputRegion = originalMask->GetLargestPossibleRegion();
 	const typename ImageType::SizeType& inputSize = inputRegion.GetSize();
@@ -223,8 +226,8 @@ ImageType::Pointer maskValues2One(ImageType *originalMask) {
 			pixelIndex[0] = row;
 			pixelIndex[1] = col;
 			pixelIndex[2] = depth;
-			if (originalMask->GetBufferPointer()[actPosition] >= 0.5 * valueInMask) {
-				originalMask->SetPixel(pixelIndex, 1);
+			if (originalMask->GetBufferPointer()[actPosition] >= 0.5*valueInMask) {
+				originalMask->SetPixel(pixelIndex, 100);
 			}
 			
 			row = row + 1;

@@ -21,19 +21,20 @@ class GLSZMFeatures3D : public GLSZMFeatures2DMRG<T, R>{
 		GLSZMFeatures2DMRG<T, R> GLSZM2D;
 		GLRLMFeatures<T, R> glrlm;
 		int maxZoneSize;
-		vector<double> rowSums;
-		vector<double> colSums;
+		vector<float> rowSums;
+		vector<float> colSums;
+		vector<T> vectorMatrElem;
 
         void extractGLSZMData3D(vector<T> &GLSZMData, GLSZMFeatures3D<T, R> GLSZMFeatures);
-        boost::multi_array<double, 2> getGLSZMMatrix3D(boost::multi_array<T,R> inputMatrix, vector<T> vectorMatrElem);
-        void fill3DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix);
+        boost::multi_array<float, 2> getGLSZMMatrix3D(boost::multi_array<T,R> inputMatrix, vector<T> vectorMatrElem);
+        void fill3DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix);
         int getBiggestZoneNr3D(vector<T> vectorMatrElem);
 
     public:
         void getNeighbors3D(boost::multi_array<T, R> &inputMatrix, T actElement, vector<vector< int> > &matrixIndices);
         void calculateAllGLSZMFeatures3D(GLSZMFeatures3D<T,R> &GLSZMFeat, Image<T, R> imageAttr, ConfigFile config);
         void writeCSVFileGLSZM3D(GLSZMFeatures3D<T,R> GLSZMFeat, string outputFolder);
-		void writeOneFileGLSZM3D(GLSZMFeatures3D<T, R> GLSZMFeat, string outputFolder);
+		void writeOneFileGLSZM3D(GLSZMFeatures3D<T, R> GLSZMFeat, ConfigFile config, int &parameterSpaceNr);
 
 };
 
@@ -51,7 +52,7 @@ of a neighborhood, it is set to NAN.\n
 The size of the neighborhoods are stored in the matrix.
 */
 template <class T, size_t R>
-void GLSZMFeatures3D<T, R>::fill3DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &GLSZMatrix) {
+void GLSZMFeatures3D<T, R>::fill3DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &GLSZMatrix) {
 	T actualElement;
 	vector<vector<int> > matrixIndices;
 	vector<int> actualIndex;
@@ -100,7 +101,7 @@ int GLSZMFeatures3D<T, R>::getBiggestZoneNr3D(vector<T> vectorMatrElem) {
 	vector<vector<int> > matrixIndices;
 	vector<int> actualIndex;
 	maxZoneSize = 0;
-	vectorMatrElement.sort();
+	//vectorMatrElement.sort();
 
 	/*int tempZoneSize = 0;
 	int actGreyIndex = 0;
@@ -203,8 +204,8 @@ In the method getGLSZMMatrix3D the GLSZM matrices with the right size are genera
 This function only initiates a GLSZM with the right size.
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLSZMFeatures3D<T,R>::getGLSZMMatrix3D( boost::multi_array<T, R> inputMatrix, vector<T> vectorMatrElem){
-    typedef boost::multi_array<double, 2>  GLSZMat;
+boost::multi_array<float, 2> GLSZMFeatures3D<T,R>::getGLSZMMatrix3D( boost::multi_array<T, R> inputMatrix, vector<T> vectorMatrElem){
+    typedef boost::multi_array<float, 2>  GLSZMat;
 	//get the maximal zone size in order to determine the size of the matrix
     //maxZoneSize=getBiggestZoneNr3D(inputMatrix);
 	maxZoneSize = inputMatrix.shape()[0] * inputMatrix.shape()[1] * inputMatrix.shape()[2];
@@ -226,9 +227,9 @@ template <class T, size_t R>
 void GLSZMFeatures3D<T, R>::calculateAllGLSZMFeatures3D(GLSZMFeatures3D<T,R> &GLSZMFeatures, Image<T,R> imageAttr, ConfigFile config){
     this->diffGreyLevels = imageAttr.diffGreyLevels;
 	GLSZMFeatures.getConfigValues(config);
-    boost::multi_array<double,2> GLSZM=GLSZMFeatures.getGLSZMMatrix3D(imageAttr.imageMatrix, imageAttr.vectorOfMatrixElements);
+    boost::multi_array<float,2> GLSZM=GLSZMFeatures.getGLSZMMatrix3D(imageAttr.imageMatrix, imageAttr.vectorOfMatrixElements);
 
-    double totalSum = GLSZMFeatures.calculateTotalSum(GLSZM);
+    float totalSum = GLSZMFeatures.calculateTotalSum(GLSZM);
     rowSums=GLSZMFeatures.calculateRowSums(GLSZM);
     colSums = GLSZMFeatures.calculateColSums(GLSZM);
 
@@ -246,12 +247,12 @@ void GLSZMFeatures3D<T, R>::calculateAllGLSZMFeatures3D(GLSZMFeatures3D<T,R> &GL
     GLSZMFeatures.calculateRunLengthNonUniformityNorm(rowSums, totalSum);
     GLSZMFeatures.calculateRunLengthNonUniformity(rowSums, totalSum);
     GLSZMFeatures.calculateRunPercentage3D(imageAttr.vectorOfMatrixElements, totalSum, 1);
-    boost::multi_array<double,2> probMatrix = GLSZMFeatures.calculateProbMatrix(GLSZM, totalSum);
-    double meanGrey = GLSZMFeatures.calculateMeanProbGrey(probMatrix);
+    boost::multi_array<float,2> probMatrix = GLSZMFeatures.calculateProbMatrix(GLSZM, totalSum);
+	float meanGrey = GLSZMFeatures.calculateMeanProbGrey(probMatrix);
 
     GLSZMFeatures.calculateGreyLevelVar(probMatrix, meanGrey);
 
-    double meanRun = GLSZMFeatures.calculateMeanProbRun(probMatrix);
+	float meanRun = GLSZMFeatures.calculateMeanProbRun(probMatrix);
     GLSZMFeatures.calculateRunLengthVar(probMatrix, meanRun);
     GLSZMFeatures.calculateRunEntropy(probMatrix);
 
@@ -303,8 +304,14 @@ void GLSZMFeatures3D<T, R>::writeCSVFileGLSZM3D(GLSZMFeatures3D<T,R> GLSZMFeat, 
 }
 
 template <class T, size_t R>
-void GLSZMFeatures3D<T, R>::writeOneFileGLSZM3D(GLSZMFeatures3D<T, R> GLSZMFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLSZMFeatures3D<T, R>::writeOneFileGLSZM3D(GLSZMFeatures3D<T, R> GLSZMFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -312,14 +319,38 @@ void GLSZMFeatures3D<T, R>::writeOneFileGLSZM3D(GLSZMFeatures3D<T, R> GLSZMFeat,
 	ofstream GLSZMCSV;
 	GLSZMCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	GLSZM2D.defineGLSZMFeatures(features);
 
 	vector<T> GLSZMData;
 	extractGLSZMData3D(GLSZMData, GLSZMFeat);
-	for (int i = 0; i< GLSZMData.size(); i++) {
-		GLSZMCSV << "GLSZMFeatures3D" << "," << features[i] << ",";
-		GLSZMCSV << GLSZMData[i];
-		GLSZMCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		GLSZM2D.defineGLSZMFeatures(features);
+		for (int i = 0; i < GLSZMData.size(); i++) {
+			GLSZMCSV << "GLSZMFeatures3D" << "," << features[i] << ",";
+			GLSZMCSV << GLSZMData[i];
+			GLSZMCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		GLSZM2D.defineGLSZMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		featSpaceTable << parameterSpaceName << "," << "3D" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < GLSZMData.size(); i++) {
+			GLSZMCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			GLSZMCSV << GLSZMData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			GLSZMCSV << "\n";
+		}
+
 	}
 	GLSZMCSV.close();
 }

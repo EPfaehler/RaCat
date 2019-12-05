@@ -2,7 +2,7 @@
 #define STATISTICALFEATURES_INCLUDED
 
 #include "functional"
-
+#include "image.h"
 #include <iostream>
 #include "boost/multi_array.hpp"
 #include "math.h"
@@ -60,6 +60,7 @@ class StatisticalFeatures{
 
         void fillAccumulator(Accumulator &acc, vector<T> vectorMatrElem);
         void defineStatFeatures(vector<string> &features);
+		void defineStatFeaturesOntology(vector<string> &features);
         void extractStatData(vector<T> &statData, StatisticalFeatures<T, R> statFeatures);
 
 
@@ -118,7 +119,7 @@ class StatisticalFeatures{
 
         void calculateAllStatFeatures(StatisticalFeatures<T,R> &stat, vector<T> vectorMatrElement);
         void writeCSVFileStatistic(StatisticalFeatures<T, R> stat, string outputFolder);
-		void writeOneFileStatistic(StatisticalFeatures<T, R> stat, string outputFolder);
+		void writeOneFileStatistic(StatisticalFeatures<T, R> stat, ConfigFile config);
 
 
 };
@@ -351,7 +352,7 @@ template <class T, size_t R>
 void StatisticalFeatures<T, R>::meanAbsoluteDev(vector<T> vectorMatrElem){
     vector<T> tempVector = vectorMatrElem;
     transform( tempVector.begin(), tempVector.end(), tempVector.begin(),
-                     bind2nd( minus<T>(), this->meanValue) );
+                     std::bind2nd( minus<T>(), this->meanValue) );
     meanAbsDev = for_each(tempVector.begin(), tempVector.end(), sum_absol_value<float>()).result();
     meanAbsDev = meanAbsDev/tempVector.size();
 
@@ -368,7 +369,7 @@ template <class T, size_t R>
 void StatisticalFeatures<T, R>::medianAbsoluteDev(vector<T> vectorMatrElem){
     vector<T> tempVector = vectorMatrElem;
     transform( tempVector.begin(), tempVector.end(), tempVector.begin(),
-                     bind2nd( minus<T>(), this->medianValue) );
+                     std::bind2nd( minus<T>(), this->medianValue) );
     medianAbsDev = for_each(tempVector.begin(), tempVector.end(), sum_absol_value<float>()).result();
     medianAbsDev = medianAbsDev/tempVector.size();
 
@@ -400,7 +401,7 @@ void StatisticalFeatures<T, R>::getRobustMeanAbsDev(vector<T> vectorMatrElem){
     accumulator_set<int, features<tag::mean> > accRobMean;
     accRobMean = for_each( tempVector.begin(), tempVector.end(), accRobMean );
     T meanValueRob = mean(accRobMean);
-    transform(tempVector.begin(), tempVector.end(), tempVector.begin(),bind2nd( minus<T>(), meanValueRob) );
+    transform(tempVector.begin(), tempVector.end(), tempVector.begin(),std::bind2nd( minus<T>(), meanValueRob) );
     robustMeanAbsDev = for_each(tempVector.begin(), tempVector.end(),sum_absol_value<float>()).result();
     robustMeanAbsDev = robustMeanAbsDev/tempVector.size();
 
@@ -414,7 +415,7 @@ void StatisticalFeatures<T, R>::getRobustMeanAbsDev(vector<T> vectorMatrElem){
 template<class T, size_t R>
 void StatisticalFeatures<T, R>::getSmallerElements(vector<T> &vectorOfElem, T &valueLimit){
     typename vector<T>::iterator lessThan;
-    lessThan = remove_if(vectorOfElem.begin(), vectorOfElem.end(), bind2nd(less<T>(), valueLimit-1));
+    lessThan = std::remove_if(vectorOfElem.begin(), vectorOfElem.end(), std::bind2nd(less<T>(), valueLimit-1));
     vectorOfElem.erase(lessThan, vectorOfElem.end());
 }
 
@@ -426,7 +427,7 @@ void StatisticalFeatures<T, R>::getSmallerElements(vector<T> &vectorOfElem, T &v
 template<class T, size_t R>
 void StatisticalFeatures<T, R>::getGreaterElements(vector<T> &vectorOfElem, T &value){
     typename vector<T>::iterator greaterThan;
-    greaterThan = remove_if(vectorOfElem.begin(), vectorOfElem.end(), bind2nd(greater<T>(), value));
+    greaterThan = std::remove_if(vectorOfElem.begin(), vectorOfElem.end(), std::bind2nd(greater<T>(), value));
     vectorOfElem.erase(greaterThan, vectorOfElem.end());
 }
 
@@ -485,10 +486,15 @@ void StatisticalFeatures<T, R>::writeCSVFileStatistic(StatisticalFeatures<T,R> s
 
 
 template <class T, size_t R>
-void StatisticalFeatures<T, R>::writeOneFileStatistic(StatisticalFeatures<T, R> stat, string outputFolder)
+void StatisticalFeatures<T, R>::writeOneFileStatistic(StatisticalFeatures<T, R> stat, ConfigFile config)
 {
-
-	string csvName = outputFolder + ".csv";
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -496,16 +502,51 @@ void StatisticalFeatures<T, R>::writeOneFileStatistic(StatisticalFeatures<T, R> 
 	ofstream statisticCSV;
 	statisticCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineStatFeatures(features);
+	
 
 	vector<T> statData;
 	extractStatData(statData, stat);
-	for (int i = 0; i< statData.size(); i++) {
-		statisticCSV << "Statistics" << "," << features[i] << ",";
-		statisticCSV << statData[i];
-		statisticCSV << "\n";
+	if (config.csvOutput == 1) {
+		defineStatFeatures(features);
+		for (int i = 0; i < statData.size(); i++) {
+			statisticCSV << "Statistics" << "," << features[i] << ",";
+			statisticCSV << statData[i];
+			statisticCSV << "\n";
+		}
+		statisticCSV.close();
 	}
-	statisticCSV.close();
+	else if (config.ontologyOutput == 1) {
+		defineStatFeaturesOntology(features);
+		for (int i = 0; i < statData.size(); i++) {
+			statisticCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			statisticCSV << statData[i] << "," << config.featureParameterSpaceName << "," << config.calculationSpaceName;
+			statisticCSV << "\n";
+		}
+		statisticCSV.close();
+	}
+}
+
+template <class T, size_t R>
+void StatisticalFeatures<T, R>::defineStatFeaturesOntology(vector<string> &features) {
+	features.push_back("Fstat.mean");
+	features.push_back("Fstat.var");
+	features.push_back("Fstat.skew");
+	features.push_back("Fstat.kurt");
+	features.push_back("Fstat.median");
+	features.push_back("Fstat.min");		
+	features.push_back("Fstat.P10");
+	features.push_back("Fstat.P90");
+	features.push_back("Fstat.max");
+	features.push_back("Fstat.iqr");
+	features.push_back("Fstat.range");
+	features.push_back("Fstat.mad");
+	features.push_back("Fstat.rmad");
+	features.push_back("Fstat.medad");
+	features.push_back("Fstat.cov");
+	features.push_back("Fstat.qcod");
+	features.push_back("Fstat.energy");
+	features.push_back("Fstat.rms");
+
 }
 
 template <class T, size_t R>

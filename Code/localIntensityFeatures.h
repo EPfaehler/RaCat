@@ -5,6 +5,7 @@
 #include "image.h"
 #include "morphologicalFeatures.h"
 #include "matrixFunctions.h"
+#include <cmath>
 
 
 /*! \file */
@@ -39,14 +40,14 @@ private:
 	void getConvMatrixSize(ImageType::Pointer mask, int &nrVoxelsDirection, float spacing, float radius);
 	//fill the convolutional matrix
 	void fillConvMatrix(boost::multi_array<T, R> &matrix, ImageType::Pointer mask);
-	void fillVector(vector<double> &index, boost::multi_array<T, R> convMatrix);
+	void fillVector(vector<float> &index, boost::multi_array<T, R> convMatrix);
 	ImageType::Pointer calculatePeaks(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> localIntMatrix, boost::multi_array<T, R> convolutionalMatrix, ImageType::Pointer image);
 	boost::multi_array<T, R> calculateConvolutionMatrix(ImageType::Pointer mask);
-	float calculatePeakValues(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> convolutionalMatrix, vector<int> nrValues, ImageType::Pointer image);
 	void calculateLocalIntensityPeak(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> peakMatrix);
 	void calculateGlobalIntensityPeak(boost::multi_array<T, R> peakMatrix, boost::multi_array<T, R> resegmentedMask);
 
 	void defineLocalIntenseFeatures(vector<string> &features);
+	void defineLocalIntenseFeaturesOntology(vector<string> &features);
 	void extractLocalIntenseData(vector<T> &localIntData, LocalIntensityFeatures<T, R> localIntFeatures);
 
 public:
@@ -56,7 +57,9 @@ public:
 	}
 	void calculateAllLocalIntensityFeatures(LocalIntensityFeatures<T, R> &localInt, Image<T, R> imageAttr, ConfigFile config);
 	void writeCSVFileLocalIntensity(LocalIntensityFeatures<T, R> localInt, string outputfolder);
-	void writeOneFileLocalInt(LocalIntensityFeatures<T, R> localInt, string outputfolder);
+	void writeOneFileLocalInt(LocalIntensityFeatures<T, R> localInt, ConfigFile config);
+	void writeCSVFileLocalIntensityPET(LocalIntensityFeatures<T, R> localInt, string outputfolder);
+	void writeOneFileLocalIntPET(LocalIntensityFeatures<T, R> localInt, ConfigFile config);
 
 };
 
@@ -100,7 +103,7 @@ In the function getConvMatrixSize, it is determined which size the convolutional
 template<class T, size_t R>
 void LocalIntensityFeatures<T, R>::getConvMatrixSize(ImageType::Pointer mask, int &nrVoxelsDirection, float spacing, float radius) {
 	//now get the number of voxels which are fitting 100% in the matrix for all directions
-	nrVoxelsDirection = floor((radius-double(spacing)/2.0)  / spacing);
+	nrVoxelsDirection = floor((radius-(float(spacing)/2.0))  / spacing);
 	//nrVoxelsDirection = floor(radius/ spacing);
 	if (fmod(radius, nrVoxelsDirection) != 0) {
 		//if we have some fractional voxels in x direction, the convolutional matrix has also to include the element of the fractional voxel
@@ -128,23 +131,24 @@ void LocalIntensityFeatures<T, R>::fillConvMatrix(boost::multi_array<T, R> &conv
 	vector<double> voxelSpacingY = { { inputSpacing[0], inputSpacing[2] } };
 	vector<double> voxelSpacingZ = { { inputSpacing[0], inputSpacing[1] } };
 	//float volVoxel = inputSpacing[0] * inputSpacing[1] * inputSpacing[2];
-	float frac;
+
 	//get the center index
-	vector<double> indexOfCenter;
+	vector<float> indexOfCenter;
 	
 	fillVector(indexOfCenter, convMatrix);
-	vector<double> actPos = { {0,0,0} };
-	double distFromCenter;
+	vector<float> actPos = { {0,0,0} };
+	float distFromCenter;
 	int nrVoxels = 0;
 	int test = 0;
 	for (int depth = 0; depth < convMatrix.shape()[2]; ++depth) {
 		for (int row = 0; row < convMatrix.shape()[0]; ++row) {
 			for (int col = 0; col < convMatrix.shape()[1]; ++col) {
-				actPos[0] = double(row)*inputSpacing[0] + inputSpacing[0]/2;
-				actPos[1] = double(col)*inputSpacing[1] + inputSpacing[1]/2 ;
-				actPos[2] = double(depth)*inputSpacing[2] + inputSpacing[2]/2 ;
+				actPos[0] = float(row)*inputSpacing[0] + inputSpacing[0]/2 - (indexOfCenter[0] + 0.5)*inputSpacing[0] ;
+				actPos[1] = float(col)*inputSpacing[1] + inputSpacing[1]/2 - (indexOfCenter[1] + 0.5)*inputSpacing[1] ;
+				actPos[2] = float(depth)*inputSpacing[2] + inputSpacing[2]/2 - (indexOfCenter[2] + 0.5)*inputSpacing[2];
 				distFromCenter = std::sqrt(std::pow((actPos[0] - (indexOfCenter[0]+0.5)*inputSpacing[0] ), 2) + std::pow((actPos[1]  - (indexOfCenter[1]+0.5) * inputSpacing[1] ), 2) + std::pow((actPos[2] - (indexOfCenter[2]+0.5) * inputSpacing[2] ), 2));
-				if (distFromCenter <= 6.2) {
+				if(abs(actPos[0]) <= 6.2 && abs(actPos[1]) <= 6.2 && abs(actPos[2])<=6.2){
+				//if (distFromCenter <= 6.2) {
 					convMatrix[row][col][depth] = 1;
 				}
 				
@@ -158,10 +162,10 @@ void LocalIntensityFeatures<T, R>::fillConvMatrix(boost::multi_array<T, R> &conv
 
 //fill a vector with indices
 template<class T, size_t R>
-void LocalIntensityFeatures<T, R>::fillVector(vector<double> &index, boost::multi_array<T, R> convMatrix) {
-	index.push_back(double(convMatrix.shape()[0] -1 )/ 2.0);
-	index.push_back(double(convMatrix.shape()[1] -1)/ 2.0);
-	index.push_back(double(convMatrix.shape()[2] -1)/ 2.0);
+void LocalIntensityFeatures<T, R>::fillVector(vector<float> &index, boost::multi_array<T, R> convMatrix) {
+	index.push_back(float(convMatrix.shape()[0] -1 )/ 2.0);
+	index.push_back(float(convMatrix.shape()[1] -1)/ 2.0);
+	index.push_back(float(convMatrix.shape()[2] -1)/ 2.0);
 }
 
 
@@ -207,22 +211,63 @@ ImageType::Pointer LocalIntensityFeatures<T, R>::calculatePeaks(boost::multi_arr
 	int peakMatrixX = inputMatrix.shape()[0];
 	int peakMatrixY = inputMatrix.shape()[1];
 	int peakMatrixZ = inputMatrix.shape()[2];
-	vector<T> convVector;
-	for (int depth = 0; depth < convolutionalMatrix.shape()[2]; depth++) {
-		for (int row = 0; row < convolutionalMatrix.shape()[0]; row++) {
-			for (int col = 0; col < convolutionalMatrix.shape()[1]; col++) {
-				convVector.push_back(convolutionalMatrix[row][col][depth]);
+	//assign the image matrix
+	
+	
+
+	const typename ImageType::SpacingType& inputSpacing = image->GetSpacing();
+	unsigned int dimImage[] = { convolutionalMatrix.shape()[0],convolutionalMatrix.shape()[1],convolutionalMatrix.shape()[2] };
+	float voxelSizeImage[] = { inputSpacing[0],inputSpacing[1],inputSpacing[2] };
+
+	ImportFilterType::SizeType size;
+	//set image size
+	size[0] = convolutionalMatrix.shape()[0];
+	size[1] = convolutionalMatrix.shape()[1];
+	size[2] = convolutionalMatrix.shape()[2];
+
+
+	int nrVoxelsPET = size[0] * size[1] * size[2];
+	//start with importing the image
+	ImageType::RegionType region;
+
+	ImageType::IndexType start;
+	start.Fill(0);
+
+	region.SetIndex(start);
+
+
+
+	region.SetSize(size);
+
+	ImageType::Pointer imageNew = ImageType::New();
+	imageNew->SetRegions(region);
+	imageNew->Allocate();
+	imageNew->FillBuffer(itk::NumericTraits<T>::Zero);
+
+	ImageType::IndexType pixelIndex;
+	region.SetIndex(start);
+	region.SetSize(size);
+
+	for (int depth = 0; depth < convolutionalMatrix.shape()[2] ; depth++) {
+		for (int row = 0; row < convolutionalMatrix.shape()[0] ; row++) {
+			for (int col = 0; col < convolutionalMatrix.shape()[1] ; col++) {
+				pixelIndex[0] = row;
+				pixelIndex[1] = col ;
+				pixelIndex[2] = depth;
+				imageNew->SetPixel(pixelIndex, convolutionalMatrix[row][col][depth]);
+					
+				
+
 			}
 		}
-	}		
-	float *kernelArray = &convVector[0];
-	unsigned int dimKernel[] = { convolutionalMatrix.shape()[0], convolutionalMatrix.shape()[1], convolutionalMatrix.shape()[2] };
-	ImageType::Pointer kernel = converArray2Image(kernelArray, dimKernel, voxelSize);
+	}
+
+	
 	using FilterType = itk::ConvolutionImageFilter<ImageType>;
 	FilterType::Pointer convolutionFilter = FilterType::New();
-	convolutionFilter->SetNormalize(TRUE);
+	convolutionFilter->SetNormalize(true);
 	convolutionFilter->SetInput(image);
-	convolutionFilter->SetKernelImage(kernel);
+	convolutionFilter->SetKernelImage(imageNew);
 	convolutionFilter->Update();
 	ImageType::Pointer peakImage = convolutionFilter->GetOutput();
 
@@ -281,8 +326,9 @@ void LocalIntensityFeatures<T, R>::calculateAllLocalIntensityFeatures(LocalInten
 	voxelSize[2] = inputSpacing[2];
 	maxElement = *max_element(imageAttr.vectorOfMatrixElements.begin(), imageAttr.vectorOfMatrixElements.end());
 	vector<vector<int> > allMaxIndices = getIndexOfMax(imageAttr.imageMatrix);
-	boost::multi_array<T, R> convMatrix = localInt.calculateConvolutionMatrix(imageAttr.mask);
+	boost::multi_array<T, R> convMatrix = localInt.calculateConvolutionMatrix(imageAttr.image);
 	//boost::multi_array<T, R> peakMatrix = calculatePeaks(imageAttr.imageMatrix, imageAttr.imageMatrixLocalInt, convMatrix, imageAttr.image);
+	
 	ImageType::Pointer peakImage = calculatePeaks(imageAttr.imageMatrix, imageAttr.imageMatrixLocalInt, convMatrix, imageAttr.image);
 	const typename ImageType::RegionType region = peakImage->GetBufferedRegion();
 
@@ -292,6 +338,22 @@ void LocalIntensityFeatures<T, R>::calculateAllLocalIntensityFeatures(LocalInten
 	//	
 	localInt.calculateLocalIntensityPeak(imageAttr.imageMatrix, peakMatrix);
 	localInt.calculateGlobalIntensityPeak(peakMatrix, imageAttr.imageMatrix);
+	localInt.localIntensityPeak = localInt.localIntensityPeak;
+	localInt.globalIntensityPeak = localInt.globalIntensityPeak;
+	if (config.imageType == "PET" && config.useSUV == 1) {
+		float correctionParam;
+		if (config.correctionParam != 0) {
+			std::cout << "The scaling factor is set. All image values will be multiplied by this parameter." << std::endl;
+			correctionParam = config.correctionParam;
+		}
+		else {
+			correctionParam = config.patientWeight / (config.initActivity * 1000);
+		}
+		
+		localInt.localIntensityPeak = localInt.localIntensityPeak*correctionParam;
+		localInt.globalIntensityPeak = localInt.globalIntensityPeak*correctionParam;
+		
+	}
 
 }
 
@@ -319,8 +381,14 @@ void LocalIntensityFeatures<T, R>::writeCSVFileLocalIntensity(LocalIntensityFeat
 }
 
 template <class T, size_t R>
-void LocalIntensityFeatures<T, R>::writeOneFileLocalInt(LocalIntensityFeatures<T, R> localInt, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void LocalIntensityFeatures<T, R>::writeOneFileLocalInt(LocalIntensityFeatures<T, R> localInt, ConfigFile config) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -328,16 +396,96 @@ void LocalIntensityFeatures<T, R>::writeOneFileLocalInt(LocalIntensityFeatures<T
 	ofstream localIntCSV;
 	localIntCSV.open(name, std::ios_base::app);
 	vector<string> features;
+	
+
+	vector<T> localIntData;
+	extractLocalIntenseData(localIntData, localInt);
+	if(config.getOneCSVFile == 1) {
+		defineLocalIntenseFeatures(features);
+		for (int i = 0; i < localIntData.size(); i++) {
+			localIntCSV << "Local intensity" << "," << features[i] << ",";
+			localIntCSV << localIntData[i];
+			localIntCSV << "\n";
+		}
+		localIntCSV.close();
+	}
+	else if (config.ontologyOutput == 1) {
+		defineLocalIntenseFeaturesOntology(features);
+		for (int i = 0; i < localIntData.size(); i++) {
+			localIntCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			localIntCSV << localIntData[i] << "," << config.featureParameterSpaceName << "," << config.calculationSpaceName;
+			localIntCSV << "\n";
+		}
+		localIntCSV.close();
+	}
+}
+
+
+template<class T, size_t R>
+void LocalIntensityFeatures<T, R>::writeCSVFileLocalIntensityPET(LocalIntensityFeatures<T, R> localInt, string outputFolder) {
+	string csvName = outputFolder + "_localIntensity.csv";
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+
+	ofstream localIntCSV;
+	localIntCSV.open(name);
+	vector<string> features;
 	defineLocalIntenseFeatures(features);
 
 	vector<T> localIntData;
 	extractLocalIntenseData(localIntData, localInt);
-	for (int i = 0; i< localIntData.size(); i++) {
-		localIntCSV << "Local intensity" << "," << features[i] << ",";
+	for (int i = 0; i < localIntData.size(); i++) {
+		localIntCSV << "PET Uptake Metrics" << "," << features[i] << ",";
 		localIntCSV << localIntData[i];
 		localIntCSV << "\n";
 	}
 	localIntCSV.close();
+}
+
+template <class T, size_t R>
+void LocalIntensityFeatures<T, R>::writeOneFileLocalIntPET(LocalIntensityFeatures<T, R> localInt, ConfigFile config) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
+	char * name = new char[csvName.size() + 1];
+	std::copy(csvName.begin(), csvName.end(), name);
+	name[csvName.size()] = '\0';
+
+	ofstream localIntCSV;
+	if ((config.useAccurate == 1 && config.includePatData == 1) ) {
+		localIntCSV.open(name, std::ios_base::app);
+	}
+	else {
+		localIntCSV.open(name);
+	}
+	vector<string> features;
+
+
+	vector<T> localIntData;
+	extractLocalIntenseData(localIntData, localInt);
+	if (config.getOneCSVFile == 1) {
+		defineLocalIntenseFeatures(features);
+		for (int i = 0; i < localIntData.size(); i++) {
+			localIntCSV << "PET Uptake Metrics" << "," << features[i] << ",";
+			localIntCSV << localIntData[i];
+			localIntCSV << "\n";
+		}
+		localIntCSV.close();
+	}
+	else if (config.ontologyOutput == 1) {
+		defineLocalIntenseFeaturesOntology(features);
+		for (int i = 0; i < localIntData.size(); i++) {
+			localIntCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			localIntCSV << localIntData[i] << "," << config.featureParameterSpaceName << "," << config.calculationSpaceName;
+			localIntCSV << "\n";
+		}
+		localIntCSV.close();
+	}
 }
 
 
@@ -345,6 +493,13 @@ template <class T, size_t R>
 void LocalIntensityFeatures<T, R>::defineLocalIntenseFeatures(vector<string> &features) {
 	features.push_back("local intensity peak");
 	features.push_back("global intensity peak");
+
+}
+
+template <class T, size_t R>
+void LocalIntensityFeatures<T, R>::defineLocalIntenseFeaturesOntology(vector<string> &features) {
+	features.push_back("Floc.peak.local");
+	features.push_back("Floc.peak.global");
 
 }
 

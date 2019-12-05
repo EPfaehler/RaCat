@@ -24,33 +24,33 @@ class NGTDMFeatures{
 
     private:
 		//values for weighting the entries (novel and uncommon features)
-		vector<double> actualSpacing;
+		vector<float> actualSpacing;
 		string normNGTDM;
 		int dist;
-		boost::multi_array<double, 2> getNGTDMatrix(boost::multi_array<T, R> inputMatrix);
+		boost::multi_array<float, 2> getNGTDMatrix(boost::multi_array<T, R> inputMatrix);
 		T getNeighborhood(boost::multi_array<T, R> inputMatrix, int *indexOfElement);
         void extractNGTDMData(vector<T> &ngtdmData, NGTDMFeatures<T, R> ngtdmFeatures);
         
     public:
 		vector<T> diffGreyLevels;
-		double coarseness;
-		double contrast;
-		double busyness;
-		double complexity;
-		double strength;
+		float coarseness;
+		float contrast;
+		float busyness;
+		float complexity;
+		float strength;
 
-        void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix);
-        double calculateSumSi(boost::multi_array<double, 2> ngtdm);
-        double calculateSumSiPi(boost::multi_array<double, 2> ngtdm);
-        int getNGP(boost::multi_array<double, 2> ngtdm);
-        int getNV(boost::multi_array<double, 2> ngtdm);
+        void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix);
+        float calculateSumSi(boost::multi_array<float, 2> ngtdm);
+        float calculateSumSiPi(boost::multi_array<float, 2> ngtdm);
+        int getNGP(boost::multi_array<float, 2> ngtdm);
+        int getNV(boost::multi_array<float, 2> ngtdm);
 
-        void calculateStrength(boost::multi_array<double, 2> ngtdm);
-        void calculateComplexity(boost::multi_array<double, 2> ngtdm);
-        void calculateCoarseness(boost::multi_array<double, 2> ngtdm);
-        void calculateContrast(boost::multi_array<double, 2> ngtdm);
-        void calculateBusyness(boost::multi_array<double, 2> ngtdm);
-        void calculateAllNGTDMFeatures(NGTDMFeatures<T,R> &ngtdm, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<double> spacing, ConfigFile config);
+        void calculateStrength(boost::multi_array<float, 2> ngtdm);
+        void calculateComplexity(boost::multi_array<float, 2> ngtdm);
+        void calculateCoarseness(boost::multi_array<float, 2> ngtdm);
+        void calculateContrast(boost::multi_array<float, 2> ngtdm);
+        void calculateBusyness(boost::multi_array<float, 2> ngtdm);
+        void calculateAllNGTDMFeatures(NGTDMFeatures<T,R> &ngtdm, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<float> spacing, ConfigFile config);
         void writeCSVFileNGTDM(NGTDMFeatures<T, R> ngtdm, string outputFolder);
 		void writeOneFileNGTDM(NGTDMFeatures<T, R> ngtdm, string outputFolder);
 		void defineNGTDMFeatures(vector<string> &features);
@@ -65,8 +65,8 @@ class NGTDMFeatures{
 The function fills the NGTDMatrix with the corresponding values
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> NGTDMFeatures<T, R>::getNGTDMatrix(boost::multi_array<T,R> inputMatrix){
-    typedef boost::multi_array<double, 2>  ngtdmat;
+boost::multi_array<float, 2> NGTDMFeatures<T, R>::getNGTDMatrix(boost::multi_array<T,R> inputMatrix){
+    typedef boost::multi_array<float, 2>  ngtdmat;
     int sizeMatrix = diffGreyLevels.size();
     ngtdmat NGTDMatrix(boost::extents[sizeMatrix][3]);
     int indexOfElement[3] = {0,0,0};
@@ -143,7 +143,7 @@ T NGTDMFeatures<T, R>::getNeighborhood(boost::multi_array<T,R> inputMatrix, int 
 The function calculates the probability matrix of the NGTD matrix, as many features are calculated using the probabilities. 
 */
 template <class T, size_t R>
-void NGTDMFeatures<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix){
+void NGTDMFeatures<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix){
     int numItem = 0;
     for(int actElementIndex =0; actElementIndex<diffGreyLevels.size(); actElementIndex++){
         numItem += ngtdMatrix[actElementIndex][0];
@@ -161,7 +161,7 @@ void NGTDMFeatures<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, 
 This function returns the number of discretized grey values that have a probability >0
 */
 template<class T, size_t R>
-int NGTDMFeatures<T, R>::getNGP(boost::multi_array<double, 2> ngtdm){
+int NGTDMFeatures<T, R>::getNGP(boost::multi_array<float, 2> ngtdm){
     int ngp = 0;
     for(int i = 0; i< ngtdm.shape()[0]; i++){
         if(ngtdm[i][0]!=0){
@@ -179,7 +179,7 @@ int NGTDMFeatures<T, R>::getNGP(boost::multi_array<double, 2> ngtdm){
 This function returns the sum of all numbers of voxels in each neighborhood
 */
 template<class T, size_t R>
-int NGTDMFeatures<T, R>::getNV(boost::multi_array<double, 2> ngtdm){
+int NGTDMFeatures<T, R>::getNV(boost::multi_array<float, 2> ngtdm){
     int nv =0;
     for(int i = 0; i< ngtdm.shape()[0]; i++){
         nv+=ngtdm[i][0];
@@ -194,8 +194,8 @@ int NGTDMFeatures<T, R>::getNV(boost::multi_array<double, 2> ngtdm){
 @param[out] int sumSiPi : sum over all products of column entries
 */
 template<class T, size_t R>
-double NGTDMFeatures<T, R>::calculateSumSiPi(boost::multi_array<double, 2> ngtdm) {
-	double sumSiPi = 0;
+float NGTDMFeatures<T, R>::calculateSumSiPi(boost::multi_array<float, 2> ngtdm) {
+	float sumSiPi = 0;
 	for (int row = 0; row<ngtdm.shape()[0]; row++) {
 		sumSiPi += ngtdm[row][1] * ngtdm[row][2];
 	}
@@ -209,8 +209,8 @@ double NGTDMFeatures<T, R>::calculateSumSiPi(boost::multi_array<double, 2> ngtdm
 @param[out] int sumSi : sum over all si
 */
 template<class T, size_t R>
-double NGTDMFeatures<T, R>::calculateSumSi(boost::multi_array<double, 2> ngtdm) {
-	double sumSi = 0;
+float NGTDMFeatures<T, R>::calculateSumSi(boost::multi_array<float, 2> ngtdm) {
+	float sumSi = 0;
 	for (int row = 0; row<ngtdm.shape()[0]; row++) {
 		sumSi += ngtdm[row][2];
 	}
@@ -226,8 +226,8 @@ This function calculate the coarseness of the VOI. The coarseness is an indicato
 \f$ F_{coarseness} = \frac{1}{\sum{i=1}^{N_{g}}p_{i}s{i}}\f$ 
 */
 template<class T, size_t R>
-void NGTDMFeatures<T, R>::calculateCoarseness(boost::multi_array<double, 2> ngtdm){
-    double sumSiPi = calculateSumSiPi(ngtdm);
+void NGTDMFeatures<T, R>::calculateCoarseness(boost::multi_array<float, 2> ngtdm){
+    float sumSiPi = calculateSumSiPi(ngtdm);
     coarseness = 1/sumSiPi;
 }
 
@@ -239,7 +239,7 @@ This function calculate the contrast of the VOI. The value gives information abo
 \f$ F_{contrast} = ( \frac{1}{N_{g, p}(N_{g, p}-1)}\sum{i=1}^{N_{g}}\sum{j=1}^{N_{g}}p_{i}p{j}(i-j)^{2} )\frac{1}\sum{i=1}^{N_{g}} s_{i}}\f$ 
 */
 template<class T, size_t R>
-void NGTDMFeatures<T, R>::calculateContrast(boost::multi_array<double, 2> ngtdm){
+void NGTDMFeatures<T, R>::calculateContrast(boost::multi_array<float, 2> ngtdm){
     int ng = getNGP(ngtdm);
     int nv = getNV(ngtdm);
     contrast = 0;
@@ -248,7 +248,7 @@ void NGTDMFeatures<T, R>::calculateContrast(boost::multi_array<double, 2> ngtdm)
             contrast += ngtdm[row][1]*ngtdm[rowj][1]*pow((diffGreyLevels[row]-diffGreyLevels[rowj]), 2);
         }
     }
-    double sumSi = calculateSumSi(ngtdm);
+    float sumSi = calculateSumSi(ngtdm);
     contrast = contrast*sumSi;
     contrast = contrast/(ng*(ng-1)*nv);
 }
@@ -260,9 +260,9 @@ This function calculate the busyness of the VOI. It gives information about rapi
 \f$ F_{busyness} = ( \frac{\sum{i=1}^{N_{g}}p_{i}s_{i}}{\sum{j=1}^{N_{g}\sum{j=1}^{N_{g}|ip_{i}-jp_{j}|}\f$ 
 */
 template<class T, size_t R>
-void NGTDMFeatures<T, R>::calculateBusyness(boost::multi_array<double, 2> ngtdm){
-    double sumSiPi = calculateSumSiPi(ngtdm);
-    double denominator = 0;
+void NGTDMFeatures<T, R>::calculateBusyness(boost::multi_array<float, 2> ngtdm){
+    float sumSiPi = calculateSumSiPi(ngtdm);
+    float denominator = 0;
     int ng = getNGP(ngtdm);
     if(ng > 1){
         for(int row = 0; row < ngtdm.shape()[0]; row++){
@@ -287,12 +287,12 @@ This function calculates the complexity of the VOI. It gives also information ab
 \f$ F_{complexity} = ( \frac{1}{N_{v}} \sum{i=1}^{N_{g}}\sum{j=1}^{N_{g}}|i-j|\frac{p_{i}s_{i}+p_{j}s_{j}}{p_{i}+p_{j}}\f$
 */
 template<class T, size_t R>
-void NGTDMFeatures<T, R>::calculateComplexity(boost::multi_array<double, 2> ngtdm){
+void NGTDMFeatures<T, R>::calculateComplexity(boost::multi_array<float, 2> ngtdm){
     int ng = getNGP(ngtdm);
     int nv = getNV(ngtdm);
     complexity = 0;
-    double nominator;
-    double denominator;
+    float nominator;
+    float denominator;
     for(int row = 0; row < ngtdm.shape()[0]; row++){
         for(int rowj = 0; rowj < ngtdm.shape()[0]; rowj++){
             if (ngtdm[row][0] != 0 && ngtdm[rowj][0] != 0){
@@ -314,9 +314,9 @@ This function calculates the strength of the VOI. It gives also information abou
 \f$ F_{strength} = ( \frac{\sum{i=1}^{N_{g}}\sum{j=1}^{N_{g}}(p_{i}+p_{j})j)^{2}}{\sum_{i=1}{N_{g}}s_{i}}\f$
 */
 template<class T, size_t R>
-void NGTDMFeatures<T, R>::calculateStrength(boost::multi_array<double, 2> ngtdm){
+void NGTDMFeatures<T, R>::calculateStrength(boost::multi_array<float, 2> ngtdm){
     strength = 0;
-    double sumSi = calculateSumSi(ngtdm);
+    float sumSi = calculateSumSi(ngtdm);
         for(int row = 0; row < ngtdm.shape()[0]; row++){
         for(int rowj = 0; rowj < ngtdm.shape()[0]; rowj++){
             if (ngtdm[row][0] != 0 && ngtdm[rowj][0] != 0){
@@ -329,12 +329,12 @@ void NGTDMFeatures<T, R>::calculateStrength(boost::multi_array<double, 2> ngtdm)
 
 
 template <class T, size_t R>
-void NGTDMFeatures<T, R>::calculateAllNGTDMFeatures(NGTDMFeatures<T,R> &ngtdmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<double> spacing, ConfigFile config){
+void NGTDMFeatures<T, R>::calculateAllNGTDMFeatures(NGTDMFeatures<T,R> &ngtdmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<float> spacing, ConfigFile config){
 	dist = config.dist;
 	this->diffGreyLevels = diffGrey;
 	actualSpacing = spacing;
 	normNGTDM = config.normNGTDM;
-    boost::multi_array<double, 2> ngtdm =getNGTDMatrix(inputMatrix);
+    boost::multi_array<float, 2> ngtdm =getNGTDMatrix(inputMatrix);
     calculateCoarseness(ngtdm);
     calculateContrast(ngtdm);
     calculateBusyness(ngtdm);

@@ -1,4 +1,3 @@
-
 //read Dicom images from a folder
 ImageType::Pointer readDicom(string path) {
 	ImageType::Pointer finalImage;
@@ -18,8 +17,8 @@ ImageType::Pointer readDicom(string path) {
 	SeriesIdContainer::const_iterator seriesEnd = seriesUID.end();
 	while (seriesItr != seriesEnd)
 	{
-		
-		std::cout<< seriesItr->c_str() << std::endl;
+
+		std::cout << seriesItr->c_str() << std::endl;
 		++seriesItr;
 	}
 	std::string seriesIdentifier;
@@ -78,20 +77,20 @@ void reset2DImage(ImageSliceType::Pointer imageSlice)
 {
 	itk::ImageRegionIterator<ImageSliceType> imageIt(imageSlice, imageSlice->GetLargestPossibleRegion());
 	imageIt.GoToBegin();
-	while (!imageIt.IsAtEnd()){
+	while (!imageIt.IsAtEnd()) {
 		imageIt.Set(0);
 		++imageIt;
 	}
 }
 
 
-void mergeImages(ImageSliceType::Pointer tempSlice, ImageType::Pointer finalImage, int iRequiredSlice){
+void mergeImages(ImageSliceType::Pointer tempSlice, ImageType::Pointer finalImage, int iRequiredSlice) {
 	float pixelValue = 0;
 	ImageType::IndexType pixelIndex;
 	ImageSliceType::IndexType sliceIndex;
 	int iX = finalImage->GetLargestPossibleRegion().GetSize()[0];
 	int iY = finalImage->GetLargestPossibleRegion().GetSize()[1];
-	if (iRequiredSlice>0){
+	if (iRequiredSlice>0) {
 		for (int i = 0; i<iX; i++)
 			for (int j = 0; j<iY; j++)
 			{
@@ -105,7 +104,7 @@ void mergeImages(ImageSliceType::Pointer tempSlice, ImageType::Pointer finalImag
 
 				//Disable hole filling (if required please uncomment the next line (and comment the following line)).  
 				//if (pixelValue != 0)  finalImage->SetPixel(pixelIndex, pixelValue  );
-				finalImage->SetPixel(pixelIndex, pow(finalImage->GetPixel(pixelIndex),pixelValue));
+				finalImage->SetPixel(pixelIndex, pow(finalImage->GetPixel(pixelIndex), pixelValue));
 			}
 	}
 }
@@ -146,7 +145,7 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 	desiredRegion.SetSize(size);
 	desiredRegion.SetIndex(start);
 	//get only one slice
-	filter->SetDirectionCollapseToIdentity(); 
+	filter->SetDirectionCollapseToIdentity();
 	filter->SetExtractionRegion(desiredRegion);
 	filter->SetInput(mask);
 	filter->Update();
@@ -161,25 +160,25 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 	std::cout << "media storage: " << ms << std::endl;
 	// (3006,0020) SQ (Sequence with explicit length #=4)      # 370, 1 StructureSetROISequence  
 	gdcm::Tag tssroisq(0x3006, 0x0020);
-	if (!ds.FindDataElement(tssroisq)){
+	if (!ds.FindDataElement(tssroisq)) {
 		std::cout << "Problem locating 0x3006,0x0020 - Is this a valid RT Struct file?" << std::endl;
 		return 0;
 	}
 	gdcm::Tag troicsq(0x3006, 0x0039);
-	if (!ds.FindDataElement(troicsq)){
+	if (!ds.FindDataElement(troicsq)) {
 		std::cout << "Problem locating 0x3006,0x0039 - Is this a valid RT Struct file?" << std::endl;
 		return 0;
 	}
 	const gdcm::DataElement &roicsq = ds.GetDataElement(troicsq);
 
 	gdcm::SmartPointer<gdcm::SequenceOfItems> sqi = roicsq.GetValueAsSQ();
-	if (!sqi || !sqi->GetNumberOfItems()){
+	if (!sqi || !sqi->GetNumberOfItems()) {
 		return 0;
 	}
 	const gdcm::DataElement &ssroisq = ds.GetDataElement(tssroisq);
 	gdcm::SmartPointer<gdcm::SequenceOfItems> ssqi = ssroisq.GetValueAsSQ();
 	//get the number of structures in file
-	if (!ssqi || !ssqi->GetNumberOfItems()){
+	if (!ssqi || !ssqi->GetNumberOfItems()) {
 		return 0;
 	}
 	std::cout << "Number of structures found:" << sqi->GetNumberOfItems() << std::endl;
@@ -189,7 +188,7 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 		exit(EXIT_FAILURE);
 	}
 	//loop through structures
-	for (unsigned int pd = 0; pd < sqi->GetNumberOfItems(); ++pd){
+	for (unsigned int pd = 0; pd < sqi->GetNumberOfItems(); ++pd) {
 		const gdcm::Item & item = sqi->GetItem(pd + 1); // Item start at #1
 		gdcm::Attribute<0x3006, 0x0084> roinumber;
 		const gdcm::DataSet& nestedds = item.GetNestedDataSet();
@@ -200,7 +199,7 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 		gdcm::Item & sitem = ssqi->GetItem(spd + 1);
 		gdcm::DataSet& snestedds = sitem.GetNestedDataSet();
 		gdcm::Attribute<0x3006, 0x0022> sroinumber;
-		do{
+		do {
 			sitem = ssqi->GetItem(spd + 1);
 			snestedds = sitem.GetNestedDataSet();
 			sroinumber.SetFromDataElement(snestedds.GetDataElement(sroinumber.GetTag()));
@@ -208,7 +207,7 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 		} while (sroinumber.GetValue() != roinumber.GetValue());
 
 		gdcm::Tag stcsq(0x3006, 0x0026);
-		if (!snestedds.FindDataElement(stcsq)){
+		if (!snestedds.FindDataElement(stcsq)) {
 			std::cout << "Did not find sttsq data el " << stcsq << "   continuing..." << std::endl;
 			continue; //return 0;
 		}
@@ -217,19 +216,19 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 		//(3006,002a) IS [255\192\96]                              # 10,3 ROI Display Color
 		gdcm::Tag troidc(0x3006, 0x002a);
 		gdcm::Attribute<0x3006, 0x002a> color = {};
-		if (nestedds.FindDataElement(troidc)){
+		if (nestedds.FindDataElement(troidc)) {
 			const gdcm::DataElement &decolor = nestedds.GetDataElement(troidc);
 			color.SetFromDataElement(decolor);
 		}
 		//(3006,0040) SQ (Sequence with explicit length #=8)      # 4326, 1 ContourSequence
 		gdcm::Tag tcsq(0x3006, 0x0040);
-		if (!nestedds.FindDataElement(tcsq)){
+		if (!nestedds.FindDataElement(tcsq)) {
 			continue;
 		}
 		const gdcm::DataElement& csq = nestedds.GetDataElement(tcsq);
 
 		gdcm::SmartPointer<gdcm::SequenceOfItems> sqi2 = csq.GetValueAsSQ();
-		if (!sqi2 || !sqi2->GetNumberOfItems()){
+		if (!sqi2 || !sqi2->GetNumberOfItems()) {
 			std::cout << "csq: " << csq << std::endl;
 			std::cout << "sqi2: " << *sqi2 << std::endl;
 			std::cout << "Did not find sqi2 or no. items == 0   " << sqi2->GetNumberOfItems() << "   continuing..." << std::endl;
@@ -241,7 +240,7 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 		std::cout << "Structure " << pd << ". Number of regions: " << nitems << std::endl;
 		std::string str_currentOrgan(sde.GetByteValue()->GetPointer(), sde.GetByteValue()->GetLength());
 		//now loop through each item for this structure (eg one prostate region on a single slice is an item)
-		for (unsigned int i = 0; i < nitems; ++i){
+		for (unsigned int i = 0; i < nitems; ++i) {
 			const gdcm::Item & item2 = sqi2->GetItem(i + 1); // Item start at #1
 			const gdcm::DataSet& nestedds2 = item2.GetNestedDataSet();
 			// (3006,0050) DS [43.57636\65.52504\-10.0\46.043102\62.564945\-10.0\49.126537\60.714... # 398,48 ContourData
@@ -252,12 +251,12 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 			at.SetFromDataElement(contourdata);
 			const double* pts = at.GetValues();
 			unsigned int npts = at.GetNumberOfValues() / 3;
-			for (unsigned int j = 0; j < npts * 3; j += 3){
+			for (unsigned int j = 0; j < npts * 3; j += 3) {
 				point[0] = pts[j + 0];
 				point[1] = pts[j + 1];
 				point[2] = pts[j + 2];
 				//transform points to image co-ordinates
-				if (!(mask->TransformPhysicalPointToIndex(point, pixelIndex))){
+				if (!(mask->TransformPhysicalPointToIndex(point, pixelIndex))) {
 					//Are there points outside the image boundary.  This may occur with automatically segmented objects such as benches or external body outlines?  
 					iPointsOutsideBoundary++;
 				}
@@ -279,27 +278,27 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 			reset2DImage(temp2Dimage);
 			//need to create a 2D slice here, put the polygon on it, and insert it back into the 3D volume...  
 			group->AddSpatialObject(polygon); //add a new polygon group
-			
+
 			try
 			{
 				itk::Point<float, 2> newP;
 
 
 				polygon->SetPoints(pointList);  //so copy them to a polygon object
-				
-				
-				/*imageFilter->SetInput(group);
 
-				imageFilter->SetInsideValue(0);
-				imageFilter->SetOutsideValue(1);
-				imageFilter->SetSize(temp2Dimage->GetLargestPossibleRegion().GetSize());
-				imageFilter->Update();
-				temp2Dimage = imageFilter->GetOutput();*/
+
+												/*imageFilter->SetInput(group);
+
+												imageFilter->SetInsideValue(0);
+												imageFilter->SetOutsideValue(1);
+												imageFilter->SetSize(temp2Dimage->GetLargestPossibleRegion().GetSize());
+												imageFilter->Update();
+												temp2Dimage = imageFilter->GetOutput();*/
 				itk::ImageRegionIterator<ImageType2D> it(temp2Dimage, temp2Dimage->GetLargestPossibleRegion());
 				it.GoToBegin();
 				while (!it.IsAtEnd())
 				{
-					newP[0] = float(it.GetIndex()[0]) +inputSpacing[0]*0.5 ;
+					newP[0] = float(it.GetIndex()[0]) + inputSpacing[0] * 0.5;
 					newP[1] = float(it.GetIndex()[1]) + inputSpacing[1] * 0.5;
 					if (polygon->IsInside(newP) == 0) {
 						it.Set(1);
@@ -318,18 +317,18 @@ ImageType::Pointer readRTstruct(string voiPath, ImageType *imageDicom, ImageType
 
 			//merge new polygon from temp image into the contour image
 			mergeImages(temp2Dimage, mask, iCurrentSlice);
-			
+
 			//remove the polygon and clean up pointlist
 			group->RemoveSpatialObject(polygon);
 			pointList.clear();
 		}
 
-		if (iPointsOutsideBoundary > 0){
+		if (iPointsOutsideBoundary > 0) {
 			std::cout << " --" << iPointsOutsideBoundary << " contour points detected outside image boundary. Please check the output volume. ";
 			iPointsOutsideBoundary = 0;
 		}
 
 	}
-	
+
 	return mask;
 }

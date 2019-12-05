@@ -16,10 +16,10 @@ class GLRLMFeatures3DAVG : GLRLMFeatures<T,R>{
 private:
     GLRLMFeatures<T,R> glrlm;
     double totalSum;
-    boost::multi_array<double, 2> createGLRLMatrix3D(boost::multi_array<T, R> inputMatrix, int ang);
+    boost::multi_array<float, 2> createGLRLMatrix3D(boost::multi_array<T, R> inputMatrix, int ang);
     void extractGLRLMData3D(vector<T> &glrlmData, GLRLMFeatures3DAVG<T, R> glrlmFeatures);
 
-    void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, int directionX, int directionY, int directionZ);
+    void fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, int directionX, int directionY, int directionZ);
     void getMaxRunLength3D(boost::multi_array<T, R> inputMatrix);
     int maxRunLength;
 
@@ -30,7 +30,7 @@ public:
 	~GLRLMFeatures3DAVG(){}
     void calculateAllGLRLMFeatures3DAVG(GLRLMFeatures3DAVG<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, ConfigFile config);
     void writeCSVFileGLRLM3DAVG(GLRLMFeatures3DAVG<T,R> glrlmFeat, string outputFolder);
-	void writeOneFileGLRLM3DAVG(GLRLMFeatures3DAVG<T, R> glrlmFeat, string outputFolder);
+	void writeOneFileGLRLM3DAVG(GLRLMFeatures3DAVG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr);
     void getXYdirections3D(int &directionX, int &directionY, int &directionZ, int ang);
 
 };
@@ -43,7 +43,7 @@ void GLRLMFeatures3DAVG<T, R>::getMaxRunLength3D(boost::multi_array<T, R> inputM
 
 //fill now the GLRLMatrices with the right values
 template <class T, size_t R>
-void GLRLMFeatures3DAVG<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glrlMatrix, int directionX, int directionY, int directionZ){
+void GLRLMFeatures3DAVG<T, R>::fill3DMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glrlMatrix, int directionX, int directionY, int directionZ){
      double actGreyLevel = 0;
     double actElement = 0;
     int runLength=0;
@@ -192,8 +192,8 @@ void GLRLMFeatures3DAVG<T, R>::getXYdirections3D(int &directionX, int &direction
 
 //create the GLRL-matrices for all the angles
 template <class T, size_t R>
-boost::multi_array<double, 2> GLRLMFeatures3DAVG<T, R>::createGLRLMatrix3D(boost::multi_array<T,R> inputMatrix, int ang){
-    typedef boost::multi_array<double, 2> glrlmat;
+boost::multi_array<float, 2> GLRLMFeatures3DAVG<T, R>::createGLRLMatrix3D(boost::multi_array<T,R> inputMatrix, int ang){
+    typedef boost::multi_array<float, 2> glrlmat;
 
     int directionX;
     int directionY;
@@ -239,12 +239,12 @@ void GLRLMFeatures3DAVG<T, R>::calculateAllGLRLMFeatures3DAVG(GLRLMFeatures3DAVG
     T sumRunLengthVar = 0;
     T sumRunEntropy = 0;
 
-    vector<double> rowSums;
-    vector<double> colSums;
+    vector<float> rowSums;
+    vector<float> colSums;
 
 
-    double meanGrey;
-    double meanRun;
+	float meanGrey;
+	float meanRun;
 
     int directionZ = -1;
 
@@ -252,13 +252,13 @@ void GLRLMFeatures3DAVG<T, R>::calculateAllGLRLMFeatures3DAVG(GLRLMFeatures3DAVG
     for(int i = 0; i < 13; i++){
 
 
-        boost::multi_array<double,2> glrlMatrix = createGLRLMatrix3D(inputMatrix, i);
+        boost::multi_array<float,2> glrlMatrix = createGLRLMatrix3D(inputMatrix, i);
 
         totalSum = glrlmFeatures.calculateTotalSum(glrlMatrix);
         rowSums = glrlmFeatures.calculateRowSums(glrlMatrix);
         colSums = glrlmFeatures.calculateColSums(glrlMatrix);
 
-        boost::multi_array<double,2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
+        boost::multi_array<float,2> probMatrix = glrlmFeatures.calculateProbMatrix(glrlMatrix, totalSum);
         meanGrey = glrlmFeatures.calculateMeanProbGrey(probMatrix);
         meanRun = glrlmFeatures.calculateMeanProbRun(probMatrix);
 
@@ -364,8 +364,14 @@ void GLRLMFeatures3DAVG<T, R>::writeCSVFileGLRLM3DAVG(GLRLMFeatures3DAVG<T,R> gl
 
 
 template <class T, size_t R>
-void GLRLMFeatures3DAVG<T, R>::writeOneFileGLRLM3DAVG(GLRLMFeatures3DAVG<T, R> glrlmFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLRLMFeatures3DAVG<T, R>::writeOneFileGLRLM3DAVG(GLRLMFeatures3DAVG<T, R> glrlmFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
@@ -373,14 +379,37 @@ void GLRLMFeatures3DAVG<T, R>::writeOneFileGLRLM3DAVG(GLRLMFeatures3DAVG<T, R> g
 	ofstream glrlmCSV;
 	glrlmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	glrlmFeat.defineGLRLMFeatures(features);
 
 	vector<T> glrlmData;
 	extractGLRLMData3D(glrlmData, glrlmFeat);
-	for (int i = 0; i< glrlmData.size(); i++) {
-		glrlmCSV << "GLRLMFeatures3Davg" << "," << features[i] << ",";
-		glrlmCSV << glrlmData[i];
-		glrlmCSV << "\n";
+	if (config.csvOutput == 1) {
+		glrlmFeat.defineGLRLMFeatures(features);
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << "GLRLMFeatures3Davg" << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i];
+			glrlmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		glrlmFeat.defineGLRLMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(config.featureParameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "3DAVG" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < glrlmData.size(); i++) {
+			glrlmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			glrlmCSV << glrlmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			glrlmCSV << "\n";
+		}
+
 	}
 	glrlmCSV.close();
 

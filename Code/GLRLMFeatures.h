@@ -37,8 +37,8 @@ GLCM matrices. \n
 template <class T,  size_t R=3>
 class GLRLMFeatures  {
     private:
-        typedef boost::multi_array<double,2> mat;
-        double totalSum;
+        typedef boost::multi_array<float,2> mat;
+        float totalSum;
         void extractGLRLMData(vector<T> &glrlmData, GLRLMFeatures<T, R> glrlmFeatures);
         int totalNrVoxels;
         //store different grey levels in vector
@@ -51,7 +51,7 @@ class GLRLMFeatures  {
         float powCol;
 		int calculateExtEmph;
         void defineGLRLMFeatures(vector<string> &features);
-
+		void defineGLRLMFeaturesOntology(vector<string> &features);
         void getXYDirections(int &directionX, int &directionY, int angle);
 
         vector<T> diffGreyLevels;
@@ -59,55 +59,55 @@ class GLRLMFeatures  {
 
         }
 
-        double shortRunEmphasis;
-        double longRunEmphasis;
-        double lowGreyEmph;
-        double highGreyEmph;
-        double shortRunLow;
-        double shortRunHigh;
-        double longRunLowEmph;
-        double longRunHighEmph;
-        double greyNonUniformity;
-        double greyNonUniformityNorm;
-        double runLengthNonUniformity;
-        double runLengthNonUniformityNorm;
-        double runPercentage;
-        double greyLevelVar;
-        double runLengthVar;
-        double runEntropy;
+        float shortRunEmphasis;
+        float longRunEmphasis;
+        float lowGreyEmph;
+        float highGreyEmph;
+        float shortRunLow;
+        float shortRunHigh;
+        float longRunLowEmph;
+        float longRunHighEmph;
+        float greyNonUniformity;
+        float greyNonUniformityNorm;
+        float runLengthNonUniformity;
+        float runLengthNonUniformityNorm;
+        float runPercentage;
+        float greyLevelVar;
+        float runLengthVar;
+        float runEntropy;
 
-        vector<double> calculateRowSums(boost::multi_array<double,2> glrlmatrix);
-        vector<double> calculateColSums(boost::multi_array<double,2> glrlmatrix);
+        vector<float> calculateRowSums(boost::multi_array<float,2> glrlmatrix);
+        vector<float> calculateColSums(boost::multi_array<float,2> glrlmatrix);
 		int findIndex(vector<T> array, int size, T target);
 
 		void getConfigValues(ConfigFile config);
-		void setEmphasisValues(int extEmph, double powRow, double powCol);
-        double calculateTotalSum(boost::multi_array<double,2> glrlMatrix);
+		void setEmphasisValues(int extEmph, float powRow, float powCol);
+        float calculateTotalSum(boost::multi_array<float,2> glrlMatrix);
         int getMaxRunLength(boost::multi_array<T, R> inputMatrix);
 		
-        void calculateShortRunEmphasis(vector<double> colSums, double totalSum);
-        void calculateLongRunEmphasis(vector<double> colSums, double totalSum);
-        void calculateLowGreyEmph(vector<double> colSums, double totalSum);
-        void calculateHighGreyEmph(vector<double> colSums, double totalSum);
-        void calculateShortRunLow(boost::multi_array<double,2> glrlmatrix, double totalSum);
-        void calculateShortRunHigh(boost::multi_array<double,2> glrlmatrix, double totalSum);
-        void calculateLongRunLowEmph(boost::multi_array<double,2> glrlmatrix, double totalSum);
-        void calculateLongRunHighEmph(boost::multi_array<double,2> glrlmatrix, double totalSum);
-        void calculateGreyNonUniformity(vector<double> colSums, double totalSum);
-        void calculateGreyNonUniformityNorm(vector<double> colSums, double totalSum);
-        void calculateRunLengthNonUniformityNorm(vector<double> rowSums, double totalSum);
-        void calculateRunLengthNonUniformity(vector<double> rowSums, double totalSum);
+        void calculateShortRunEmphasis(vector<float> colSums, float totalSum);
+        void calculateLongRunEmphasis(vector<float> colSums, float totalSum);
+        void calculateLowGreyEmph(vector<float> colSums, float totalSum);
+        void calculateHighGreyEmph(vector<float> colSums, float totalSum);
+        void calculateShortRunLow(boost::multi_array<float,2> glrlmatrix, float totalSum);
+        void calculateShortRunHigh(boost::multi_array<float,2> glrlmatrix, float totalSum);
+        void calculateLongRunLowEmph(boost::multi_array<float,2> glrlmatrix, float totalSum);
+        void calculateLongRunHighEmph(boost::multi_array<float,2> glrlmatrix, float totalSum);
+        void calculateGreyNonUniformity(vector<float> colSums, float totalSum);
+        void calculateGreyNonUniformityNorm(vector<float> colSums, float totalSum);
+        void calculateRunLengthNonUniformityNorm(vector<float> rowSums, float totalSum);
+        void calculateRunLengthNonUniformity(vector<float> rowSums, float totalSum);
 
         int calculateTotalNrVoxels(boost::multi_array<T,R> inputMatrix, int depth);
         void calculateTotalNrVoxels3D(vector<T> vectorMatrElement);
-        void calculateRunPercentage(boost::multi_array<T,R> inputMatrix, int depth, double totalSum, int nrNeighbor);
-        void calculateRunPercentage3D(vector<T> vectorMatrElement, double totalSum, int nrNeighbor);
-        boost::multi_array<double,2> calculateProbMatrix(boost::multi_array<double,2> glrlmatrix, double totalSum);
-        double calculateMeanProbGrey(boost::multi_array<double,2> probMatrix);
-        void calculateGreyLevelVar(boost::multi_array<double,2> probMatrix, double mean);
-        double calculateMeanProbRun(boost::multi_array<double,2> probMatrix);
-        void calculateRunLengthVar(boost::multi_array<double,2> probMatrix, double meanRun);
-        void calculateRunEntropy(boost::multi_array<double,2> probMatrix);
+        void calculateRunPercentage(boost::multi_array<T,R> inputMatrix, int depth, float totalSum, int nrNeighbor);
+        void calculateRunPercentage3D(vector<T> vectorMatrElement, float totalSum, int nrNeighbor);
+        boost::multi_array<float,2> calculateProbMatrix(boost::multi_array<float,2> glrlmatrix, float totalSum);
+        float calculateMeanProbGrey(boost::multi_array<float,2> probMatrix);
+        void calculateGreyLevelVar(boost::multi_array<float,2> probMatrix, float mean);
+        float calculateMeanProbRun(boost::multi_array<float,2> probMatrix);
+        void calculateRunLengthVar(boost::multi_array<float,2> probMatrix, float meanRun);
+        void calculateRunEntropy(boost::multi_array<float,2> probMatrix);
 		
 };
 template <class T, size_t R>
@@ -124,17 +124,17 @@ void GLRLMFeatures<T, R>::getConfigValues(ConfigFile config) {
 		setEmphasisValues(config.extendedEmphasis, config.powerRow, config.powerCol);
 	}
 	else if (config.extendedEmphasis == 0 ) {
-		setEmphasisValues(0, double(1), double(1));
+		setEmphasisValues(0, float(1), float(1));
 	}
 	else {
 		std::cout << "The value ExtendedEmphasisFeatures.CalculateExtendedEmph is not correct. Please us 1 or 0. It is automatically set to 0" << std::endl;
-		setEmphasisValues(0, double(1), double(1));
+		setEmphasisValues(0, float(1), float(1));
 	}
 }
 //set the exponential values to the user specified values
 //this is part of the novel and uncommon feature section
 template<class T, size_t R>
-void GLRLMFeatures<T, R>::setEmphasisValues(int extEmph, double row, double col) {
+void GLRLMFeatures<T, R>::setEmphasisValues(int extEmph, float row, float col) {
 	calculateExtEmph = extEmph;
 	powRow = row;
 	powCol = col;
@@ -143,23 +143,23 @@ void GLRLMFeatures<T, R>::setEmphasisValues(int extEmph, double row, double col)
 //from the GLRL-Matrix calculate the probability matrx
 //do this by dividing every matrix elemnt with the total nr. of voxels
 template <class T, size_t R>
-boost::multi_array<double,2> GLRLMFeatures<T, R>::calculateProbMatrix(boost::multi_array<double,2> glrlmatrix, double totalSum){
-	boost::multi_array<double,2> probMatrix=glrlmatrix;
+boost::multi_array<float,2> GLRLMFeatures<T, R>::calculateProbMatrix(boost::multi_array<float,2> glrlmatrix, float totalSum){
+	boost::multi_array<float,2> probMatrix=glrlmatrix;
     transform( probMatrix.origin(), probMatrix.origin() + probMatrix.num_elements(),
-                    probMatrix.origin(),  bind2nd(std::divides<double>(),int(totalSum)));
+                    probMatrix.origin(),  bind2nd(std::divides<float>(),int(totalSum)));
     return probMatrix;
 }
 
 /*!
 \brief calculateMeanProbGrey
-@param boost::multi_array<double,2> probMatrix matrix filled with the probabilities
+@param boost::multi_array<float,2> probMatrix matrix filled with the probabilities
 
 calculates the mean probability of the appearance of every grey level
 TODO change bordwers in for loop (probMatrix.shape())
 */
 template <class T, size_t R>
-double GLRLMFeatures<T, R>::calculateMeanProbGrey(boost::multi_array<double,2> probMatrix){
-    double mean=0;
+float GLRLMFeatures<T, R>::calculateMeanProbGrey(boost::multi_array<float,2> probMatrix){
+    float mean=0;
     for(int i=0; i<probMatrix.shape()[0]; i++){
         for(int j=0; j<probMatrix.shape()[1]; j++){
 			if (!std::isnan(diffGreyLevels[i] * probMatrix[i][j])) {
@@ -175,8 +175,8 @@ double GLRLMFeatures<T, R>::calculateMeanProbGrey(boost::multi_array<double,2> p
 
 //calcuöate the mean probability of the runlength
 template <class T, size_t R>
-double GLRLMFeatures<T, R>::calculateMeanProbRun(boost::multi_array<double,2> probMatrix){
-    double mean = 0;
+float GLRLMFeatures<T, R>::calculateMeanProbRun(boost::multi_array<float,2> probMatrix){
+    float mean = 0;
     for(int i = 0; i < probMatrix.shape()[0]; i++){
         for(int j = 0; j < probMatrix.shape()[1]; j++){
 			if (!std::isnan(j*probMatrix[i][j])) {
@@ -209,7 +209,7 @@ int GLRLMFeatures<T, R>::getMaxRunLength(boost::multi_array<T, R> inputMatrix){
 calculate the sum of all matrix elements
 */
 template<class T, size_t R>
-double GLRLMFeatures<T, R>::calculateTotalSum(boost::multi_array<double,2> glrlmatrix){
+float GLRLMFeatures<T, R>::calculateTotalSum(boost::multi_array<float,2> glrlmatrix){
     T sum = 0;
     sum = accumulate(glrlmatrix.origin(), glrlmatrix.origin() + glrlmatrix.num_elements(), 0 );
     return sum;
@@ -217,13 +217,13 @@ double GLRLMFeatures<T, R>::calculateTotalSum(boost::multi_array<double,2> glrlm
 
 /*!
 \brief calculateRowSums
-@param boost::multi_array<double,2> glrlmatrix : GLRM matrix
+@param boost::multi_array<float,2> glrlmatrix : GLRM matrix
 
 calculates the sum of rows and stores them in the vector rowSums
 */
 template<class T, size_t R>
-vector<double> GLRLMFeatures<T,R>::calculateRowSums(boost::multi_array<double,2> glrlmatrix){
-    vector<double> rowSums;
+vector<float> GLRLMFeatures<T,R>::calculateRowSums(boost::multi_array<float,2> glrlmatrix){
+    vector<float> rowSums;
     rowSums.clear();
     int sum =0;
     for(int col = 0; col < glrlmatrix.shape()[1]; col++){
@@ -242,15 +242,15 @@ vector<double> GLRLMFeatures<T,R>::calculateRowSums(boost::multi_array<double,2>
 /*!
 
 \brief calculateColSums
-@param boost::multi_array<double,2> glrlmatrix : GLRM matrix
+@param boost::multi_array<float,2> glrlmatrix : GLRM matrix
 
 calculates the sum of columns and stores them in the vector colSums
 */
 template<class T, size_t R>
-vector<double> GLRLMFeatures<T,R>::calculateColSums(boost::multi_array<double,2> glrlmatrix){
+vector<float> GLRLMFeatures<T,R>::calculateColSums(boost::multi_array<float,2> glrlmatrix){
     int sum = 0;
 
-    vector<double> colSums;
+    vector<float> colSums;
     colSums.clear();
     for(int row=0; row<glrlmatrix.shape()[0]; row++){
         sum =0;
@@ -309,7 +309,7 @@ void GLRLMFeatures<T, R>::getXYDirections(int &directionX, int &directionY, int 
 
 /*!
 \brief calculateTotalNrVoxels
-@param boost::multi_array<double,2> glrlmatrix : GLRLM matrix
+@param boost::multi_array<float,2> glrlmatrix : GLRLM matrix
 
 calculates the total number of voxels of one slice of the matrix
 
@@ -335,14 +335,14 @@ void GLRLMFeatures<T, R>::calculateTotalNrVoxels3D(vector<T> vectorMatrElement){
 
 /*!
 \brief calculateShortRunEmphasis
-@param vector<double> rowSums : vector of the sums of the rows
-@param double totalSum : sum of all matrix elements
+@param vector<float> rowSums : vector of the sums of the rows
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the short runs. The higher the value, the more short runs are in the matrix.
 */
 
 template<class T, size_t R>
-void GLRLMFeatures<T, R>::calculateShortRunEmphasis(vector<double> rowSums, double totalSum){
+void GLRLMFeatures<T, R>::calculateShortRunEmphasis(vector<float> rowSums, float totalSum){
     shortRunEmphasis = 0;
 	if (totalSum != 0) {
 		for(int j=0; j<rowSums.size(); j++){
@@ -372,14 +372,14 @@ void GLRLMFeatures<T, R>::calculateShortRunEmphasis(vector<double> rowSums, doub
 
 /*!
 \brief calculateLongRunEmphasis
-@param vector<double> rowSums : vector of the sums of the rows
-@param double totalSum : sum of all matrix elements
+@param vector<float> rowSums : vector of the sums of the rows
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the long runs. The higher the value, the more long runs are in the matrix.
 */
 
 template<class T, size_t R>
-void GLRLMFeatures<T, R>::calculateLongRunEmphasis(vector<double> rowSums, double totalSum){
+void GLRLMFeatures<T, R>::calculateLongRunEmphasis(vector<float> rowSums, float totalSum){
     longRunEmphasis=0;
 	if (totalSum != 0) {
 		for(int j=0; j<rowSums.size(); j++){
@@ -405,13 +405,13 @@ void GLRLMFeatures<T, R>::calculateLongRunEmphasis(vector<double> rowSums, doubl
 
 /*!
 \brief calculateLowGreyEmph
-@param vector<double> colSums : vector of the sums of the columns
-@param double totalSum : sum of all matrix elements
+@param vector<float> colSums : vector of the sums of the columns
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the low grey levels. The higher the value, the more low grey levels are in the matrix.
 */
 template<class T, size_t R>
-void GLRLMFeatures<T, R>::calculateLowGreyEmph(vector<double> colSums, double totalSum){
+void GLRLMFeatures<T, R>::calculateLowGreyEmph(vector<float> colSums, float totalSum){
     lowGreyEmph=0;
 	if (totalSum != 0) {
 		for(int i=0; i<colSums.size(); i++){
@@ -433,13 +433,13 @@ void GLRLMFeatures<T, R>::calculateLowGreyEmph(vector<double> colSums, double to
 
 /*!
 \brief calculateHighGreyEmph
-@param vector<double> colSums : vector of the sums of the columns
-@param double totalSum : sum of all matrix elements
+@param vector<float> colSums : vector of the sums of the columns
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the high grey levels. The higher the value, the more high grey levels are in the matrix.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateHighGreyEmph(vector<double> colSums, double totalSum){
+void GLRLMFeatures<T, R>::calculateHighGreyEmph(vector<float> colSums, float totalSum){
     highGreyEmph=0;
 	if (totalSum != 0) {
 		for(int i=0; i<colSums.size(); i++){
@@ -464,13 +464,13 @@ void GLRLMFeatures<T, R>::calculateHighGreyEmph(vector<double> colSums, double t
 
 /*!
 \brief calculateShortRunLow
-@param boost::multi_array<double,2> glrlmatrix : GLCM matrix
-@param double totalSum : sum of all matrix elements
+@param boost::multi_array<float,2> glrlmatrix : GLCM matrix
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the low grey levels which habe a short run. The higher the value, the more low grey levels with short runs are in the matrix.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateShortRunLow(boost::multi_array<double,2> glrlmatrix, double totalSum){
+void GLRLMFeatures<T, R>::calculateShortRunLow(boost::multi_array<float,2> glrlmatrix, float totalSum){
     shortRunLow = 0;
 	if (totalSum != 0) {
 		for(int row = 0; row < glrlmatrix.shape()[0]; row++){
@@ -498,13 +498,13 @@ void GLRLMFeatures<T, R>::calculateShortRunLow(boost::multi_array<double,2> glrl
 
 /*!
 \brief calculateShortRunHigh
-@param boost::multi_array<double,2> glrlmatrix : GLCM matrix
-@param double totalSum : sum of all matrix elements
+@param boost::multi_array<float,2> glrlmatrix : GLCM matrix
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the high grey levels which habe a short run. The higher the value, the more high grey levels with short runs are in the matrix.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateShortRunHigh(boost::multi_array<double,2> glrlmatrix, double totalSum){
+void GLRLMFeatures<T, R>::calculateShortRunHigh(boost::multi_array<float,2> glrlmatrix, float totalSum){
     shortRunHigh = 0;
 	if (totalSum != 0) {
 		for(int row = 0; row < glrlmatrix.shape()[0]; row++){
@@ -529,13 +529,13 @@ void GLRLMFeatures<T, R>::calculateShortRunHigh(boost::multi_array<double,2> glr
 
 /*!
 \brief calculateLongRunLowEmph
-@param boost::multi_array<double,2> glrlmatrix : GLCM matrix
-@param double totalSum : sum of all matrix elements
+@param boost::multi_array<float,2> glrlmatrix : GLCM matrix
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the low grey levels which habe a long run. The higher the value, the more low grey levels with long runs are in the matrix.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateLongRunLowEmph(boost::multi_array<double,2> glrlmatrix, double totalSum){
+void GLRLMFeatures<T, R>::calculateLongRunLowEmph(boost::multi_array<float,2> glrlmatrix, float totalSum){
     longRunLowEmph = 0;
 	if (totalSum != 0) {
 		for(int row = 0; row < glrlmatrix.shape()[0]; row++){
@@ -562,13 +562,13 @@ void GLRLMFeatures<T, R>::calculateLongRunLowEmph(boost::multi_array<double,2> g
 
 /*!
 \brief calculateLongRunHighEmph
-@param boost::multi_array<double,2> glrlmatrix : GLCM matrix
-@param double totalSum : sum of all matrix elements
+@param boost::multi_array<float,2> glrlmatrix : GLCM matrix
+@param float totalSum : sum of all matrix elements
 
 This feature emphasizes the high grey levels which habe a long run. The higher the value, the more high grey levels with long runs are in the matrix.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateLongRunHighEmph(boost::multi_array<double,2> glrlmatrix, double totalSum){
+void GLRLMFeatures<T, R>::calculateLongRunHighEmph(boost::multi_array<float,2> glrlmatrix, float totalSum){
     longRunHighEmph=0;
 	if (totalSum != 0) {
 		for (int row = 0; row < glrlmatrix.shape()[0]; row++) {
@@ -591,16 +591,16 @@ void GLRLMFeatures<T, R>::calculateLongRunHighEmph(boost::multi_array<double,2> 
 
 /*!
 \brief calculateGreyNonUniformity
-@param vector<double> colSums : vector of the column sums
-@param double totalSum : sum of all matrix elements
+@param vector<float> colSums : vector of the column sums
+@param float totalSum : sum of all matrix elements
 
 This features is a measure for the distribution of the grey levels in the image matrix. \n
 The more equally distrbuted the runs of the grey levels are, the lower is the value.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateGreyNonUniformity(vector<double> colSums, double totalSum){
+void GLRLMFeatures<T, R>::calculateGreyNonUniformity(vector<float> colSums, float totalSum){
     greyNonUniformity = 0;
-    greyNonUniformity = for_each(colSums.begin(), colSums.end(), square_accumulate<double>()).result();
+    greyNonUniformity = for_each(colSums.begin(), colSums.end(), square_accumulate<float>()).result();
 	if (totalSum != 0) {
 		greyNonUniformity = greyNonUniformity / totalSum;
 	}
@@ -612,14 +612,14 @@ void GLRLMFeatures<T, R>::calculateGreyNonUniformity(vector<double> colSums, dou
 
 /*!
 \brief calculateGreyNonUniformityNorm
-@param vector<double> colSums : vector of the column sums
-@param double totalSum : sum of all matrix elements
+@param vector<float> colSums : vector of the column sums
+@param float totalSum : sum of all matrix elements
 
 This features is a normalized version of the grey-non-uniformity feature.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateGreyNonUniformityNorm(vector<double> colSums, double totalSum){
-    greyNonUniformityNorm = for_each(colSums.begin(), colSums.end(), square_accumulate<double>()).result();
+void GLRLMFeatures<T, R>::calculateGreyNonUniformityNorm(vector<float> colSums, float totalSum){
+    greyNonUniformityNorm = for_each(colSums.begin(), colSums.end(), square_accumulate<float>()).result();
 	if (totalSum != 0) {
 		greyNonUniformityNorm = greyNonUniformityNorm / pow(totalSum, 2);
 	}
@@ -632,15 +632,15 @@ void GLRLMFeatures<T, R>::calculateGreyNonUniformityNorm(vector<double> colSums,
 
 /*!
 \brief calculateRunLengthNonUniformity
-@param vector<double> colSums : vector of the column sums
-@param double totalSum : sum of all matrix elements
+@param vector<float> colSums : vector of the column sums
+@param float totalSum : sum of all matrix elements
 
 This feature is a measurement for the distribution of the run length. \n
 The lower this value is, the more equally the run length are distributed.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateRunLengthNonUniformity(vector<double> rowSums, double totalSum){
-    runLengthNonUniformity=for_each(rowSums.begin(), rowSums.end(), square_accumulate<double>()).result();
+void GLRLMFeatures<T, R>::calculateRunLengthNonUniformity(vector<float> rowSums, float totalSum){
+    runLengthNonUniformity=for_each(rowSums.begin(), rowSums.end(), square_accumulate<float>()).result();
 	if (totalSum != 0) {
 		runLengthNonUniformity = runLengthNonUniformity / totalSum;
 	}
@@ -652,14 +652,14 @@ void GLRLMFeatures<T, R>::calculateRunLengthNonUniformity(vector<double> rowSums
 
 /*!
 \brief calculateRunLengthNonUniformityNorm
-@param vector<double> colSums : vector of the column sums
-@param double totalSum : sum of all matrix elements
+@param vector<float> colSums : vector of the column sums
+@param float totalSum : sum of all matrix elements
 
 This is a normalised version of the run-length non uniformity feature.
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateRunLengthNonUniformityNorm(vector<double> rowSums, double totalSum){
-    runLengthNonUniformityNorm=for_each(rowSums.begin(), rowSums.end(), square_accumulate<double>()).result();
+void GLRLMFeatures<T, R>::calculateRunLengthNonUniformityNorm(vector<float> rowSums, float totalSum){
+    runLengthNonUniformityNorm=for_each(rowSums.begin(), rowSums.end(), square_accumulate<float>()).result();
 	if (totalSum != 0) {
 		runLengthNonUniformityNorm = runLengthNonUniformityNorm / pow(totalSum, 2);
 	}
@@ -671,13 +671,13 @@ void GLRLMFeatures<T, R>::calculateRunLengthNonUniformityNorm(vector<double> row
 
 /*!
 \brief calculateRunPercentage
-@param boost::multi_array<double,2> glrlmatrix : GLRLM matrix
-@param double totalSum : sum of all matrix elements
+@param boost::multi_array<float,2> glrlmatrix : GLRLM matrix
+@param float totalSum : sum of all matrix elements
 
 calculates the fraction of runs appearing in the matrix and potential runs
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateRunPercentage(boost::multi_array<T,R> inputMatrix, int depth, double totalSum, int nrNeighbor){
+void GLRLMFeatures<T, R>::calculateRunPercentage(boost::multi_array<T,R> inputMatrix, int depth, float totalSum, int nrNeighbor){
 	//if (depth == 0) {
 	//	totalNrVoxels = inputMatrix.shape()[0] * inputMatrix.shape()[1] * inputMatrix.shape()[2];
 	//}
@@ -693,7 +693,7 @@ void GLRLMFeatures<T, R>::calculateRunPercentage(boost::multi_array<T,R> inputMa
 }
 
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateRunPercentage3D(vector<T> vectorMatrElement, double totalSum, int nrNeighbor){
+void GLRLMFeatures<T, R>::calculateRunPercentage3D(vector<T> vectorMatrElement, float totalSum, int nrNeighbor){
     calculateTotalNrVoxels3D(vectorMatrElement);
 	if ((totalNrVoxels)*nrNeighbor != 0) {
 		runPercentage = totalSum / ((totalNrVoxels)*nrNeighbor);
@@ -705,14 +705,14 @@ void GLRLMFeatures<T, R>::calculateRunPercentage3D(vector<T> vectorMatrElement, 
 
 /*!
 \brief calculateGreyLevelVar
-@param boost::multi_array<double,2> probMatrix : probability matrix
-@param double meanGrey : mean value of the grey levels
+@param boost::multi_array<float,2> probMatrix : probability matrix
+@param float meanGrey : mean value of the grey levels
 
 calculates the variance of grey levels \n
 the lower the value, the more homogeneous is the region
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateGreyLevelVar(boost::multi_array<double,2> probMatrix, double meanGrey){
+void GLRLMFeatures<T, R>::calculateGreyLevelVar(boost::multi_array<float,2> probMatrix, float meanGrey){
     greyLevelVar=0;
     for(int i=0; i<probMatrix.shape()[0]; i++){
         for(int j= 0; j<probMatrix.shape()[1]; j++){
@@ -726,14 +726,14 @@ void GLRLMFeatures<T, R>::calculateGreyLevelVar(boost::multi_array<double,2> pro
 
 /*!
 \brief calculateRunLengthVar
-@param boost::multi_array<double,2> probMatrix : probability matrix
-@param double meanRun : mean value of the run length
+@param boost::multi_array<float,2> probMatrix : probability matrix
+@param float meanRun : mean value of the run length
 
 calculates the variance of run length \n
 the lower the value, the more homogeneous is the region
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateRunLengthVar(boost::multi_array<double,2> probMatrix, double meanRun){
+void GLRLMFeatures<T, R>::calculateRunLengthVar(boost::multi_array<float,2> probMatrix, float meanRun){
     runLengthVar = 0;
     for(int i=0; i<probMatrix.shape()[0]; i++){
         for(int j= 0; j<probMatrix.shape()[1]; j++){
@@ -746,12 +746,12 @@ void GLRLMFeatures<T, R>::calculateRunLengthVar(boost::multi_array<double,2> pro
 
 /*!
 \brief calculateRunEntropy
-@param boost::multi_array<double,2> probMatrix : probability matrix
+@param boost::multi_array<float,2> probMatrix : probability matrix
 
 calculates the entropy of the probability matrix
 */
 template <class T, size_t R>
-void GLRLMFeatures<T, R>::calculateRunEntropy(boost::multi_array<double,2> probMatrix){
+void GLRLMFeatures<T, R>::calculateRunEntropy(boost::multi_array<float,2> probMatrix){
     runEntropy=0;
     for(int i=0; i<probMatrix.shape()[0]; i++){
         for(int j= 0; j<probMatrix.shape()[1]; j++){
@@ -809,6 +809,27 @@ void GLRLMFeatures<T, R>::defineGLRLMFeatures(vector<string> &features){
     features.push_back("Run length variance");
     features.push_back("Run entropy");
 
+}
+
+template <class T, size_t R>
+void GLRLMFeatures<T, R>::defineGLRLMFeaturesOntology(vector<string> &features) {
+	features.push_back("Frlm.sre");
+	features.push_back("Frlm.lre");
+	features.push_back("Frlm.lgre");
+	features.push_back("Frlm.hgre");
+	features.push_back("Frlm.srlge");
+	features.push_back("Frlm.srhge");
+	features.push_back("Frlm.lrlge");
+	features.push_back("Frlm.lrhge");
+	features.push_back("Frlm.glnu");
+	features.push_back("Frlm.glnu.norm");
+	features.push_back("Frlm.rlnu");
+	features.push_back("Frlm.rlnu.norm");
+	features.push_back("Frlm.r.perc");
+	features.push_back("Frlm.gl.var");
+	features.push_back("Frlm.rl.var");
+	features.push_back("Frlm.rl.entr");
+	
 }
 
 

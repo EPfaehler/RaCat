@@ -21,23 +21,23 @@ class GLSZMFeatures2DMRG : public GLRLMFeatures<T, R>{
     private:
 		//the biggest number of  voxels one zone (it is needed to determine the matrix size)		
 		int maxZoneSize;
-		vector<double> rowSums;
-		vector<double> colSums;
+		vector<float> rowSums;
+		vector<float> colSums;
 		GLRLMFeatures<T, R> glrlm;
 		int getBiggestZoneNr(boost::multi_array<T, R> inputMatrix);
-		boost::multi_array<double, 2> getGLSZMMatrix(boost::multi_array<T, R> inputMatrix);
-        void fill2DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &glcMatrix);
+		boost::multi_array<float, 2> getGLSZMMatrix(boost::multi_array<T, R> inputMatrix);
+        void fill2DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &glcMatrix);
 		void extractGLSZMData(vector<T> &GLSZMData, GLSZMFeatures2DMRG<T, R> GLSZMFeatures);
 
     public:
 
         void defineGLSZMFeatures(vector<string> &features);
-
+		void defineGLSZMFeaturesOntology(vector<string> &features);
         void getNeighbors(boost::multi_array<T, R> &inputMatrix, T actElement, vector<vector< int> > &matrixIndices);
         void getALLXYDirections(int &directionX, int &directionY, int angle);
         void calculateAllGLSZMFeatures2DMRG(GLSZMFeatures2DMRG<T,R> &GLSZMFeat, boost::multi_array<T,R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, ConfigFile config);
         void writeCSVFileGLSZM(GLSZMFeatures2DMRG<T,R> GLSZMFeat, string outputFolder);
-		void writeOneFileGLSZM(GLSZMFeatures2DMRG<T, R> GLSZMFeat, string outputFolder);
+		void writeOneFileGLSZM(GLSZMFeatures2DMRG<T, R> GLSZMFeat, ConfigFile config, int &parameterSpaceNr);
 
 };
 
@@ -53,7 +53,7 @@ of a neighborhood, it is set to NAN.\n
 The size of the neighborhoods are stored in the matrix.
 */
 template <class T, size_t R>
-void GLSZMFeatures2DMRG<T, R>::fill2DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<double, 2> &GLSZMatrix){
+void GLSZMFeatures2DMRG<T, R>::fill2DGLSZMatrices(boost::multi_array<T, R> inputMatrix, boost::multi_array<float, 2> &GLSZMatrix){
 	T actElement;
 	vector<vector<int> > matrixIndices;
 	vector<int> actualIndex;
@@ -249,8 +249,8 @@ In the method getGLSZMMatrix the GLSZM matrices with the right size are generate
 This function only initiates a GLSZM with the right size.
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> GLSZMFeatures2DMRG<T,R>::getGLSZMMatrix( boost::multi_array<T, R> inputMatrix){
-    typedef boost::multi_array<double, 2>  GLSZMat;
+boost::multi_array<float, 2> GLSZMFeatures2DMRG<T,R>::getGLSZMMatrix( boost::multi_array<T, R> inputMatrix){
+    typedef boost::multi_array<float, 2>  GLSZMat;
     //maxZoneSize=getBiggestZoneNr(inputMatrix);
 	maxZoneSize = inputMatrix.shape()[0] * inputMatrix.shape()[1];
     int sizeMatrix= (this->diffGreyLevels).size();
@@ -270,9 +270,9 @@ template <class T, size_t R>
 void GLSZMFeatures2DMRG<T, R>::calculateAllGLSZMFeatures2DMRG(GLSZMFeatures2DMRG<T,R> &GLSZMFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, ConfigFile config){
 	this->diffGreyLevels = diffGrey;
 	GLSZMFeatures.getConfigValues(config);
-	boost::multi_array<double, 2> GLSZM = GLSZMFeatures.getGLSZMMatrix(inputMatrix);
+	boost::multi_array<float, 2> GLSZM = GLSZMFeatures.getGLSZMMatrix(inputMatrix);
 
-	double totalSum = GLSZMFeatures.calculateTotalSum(GLSZM);
+	float totalSum = GLSZMFeatures.calculateTotalSum(GLSZM);
 
 	rowSums = GLSZMFeatures.calculateRowSums(GLSZM);
 	colSums = GLSZMFeatures.calculateColSums(GLSZM);
@@ -290,11 +290,11 @@ void GLSZMFeatures2DMRG<T, R>::calculateAllGLSZMFeatures2DMRG(GLSZMFeatures2DMRG
 	GLSZMFeatures.calculateRunLengthNonUniformityNorm(rowSums, totalSum);
 	GLSZMFeatures.calculateRunLengthNonUniformity(rowSums, totalSum);
 	GLSZMFeatures.calculateRunPercentage3D(vectorMatrElem, totalSum, 1);
-	boost::multi_array<double, 2> probMatrix = GLSZMFeatures.calculateProbMatrix(GLSZM, totalSum);
-	double meanGrey = GLSZMFeatures.calculateMeanProbGrey(probMatrix);
+	boost::multi_array<float, 2> probMatrix = GLSZMFeatures.calculateProbMatrix(GLSZM, totalSum);
+	float meanGrey = GLSZMFeatures.calculateMeanProbGrey(probMatrix);
 
 	GLSZMFeatures.calculateGreyLevelVar(probMatrix, meanGrey);
-	double meanRun = GLSZMFeatures.calculateMeanProbRun(probMatrix);
+	float meanRun = GLSZMFeatures.calculateMeanProbRun(probMatrix);
 	GLSZMFeatures.calculateRunLengthVar(probMatrix, meanRun);
 	GLSZMFeatures.calculateRunEntropy(probMatrix);
 }
@@ -343,21 +343,52 @@ void GLSZMFeatures2DMRG<T, R>::writeCSVFileGLSZM(GLSZMFeatures2DMRG<T,R> GLSZMFe
 }
 
 template <class T, size_t R>
-void GLSZMFeatures2DMRG<T, R>::writeOneFileGLSZM(GLSZMFeatures2DMRG<T, R> GLSZMFeat, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void GLSZMFeatures2DMRG<T, R>::writeOneFileGLSZM(GLSZMFeatures2DMRG<T, R> GLSZMFeat, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
 	ofstream GLSZMCSV;
 	GLSZMCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	GLSZMFeat.defineGLSZMFeatures(features);
 	vector<T> GLSZMData;
 	extractGLSZMData(GLSZMData, GLSZMFeat);
-	for (int i = 0; i< GLSZMData.size(); i++) {
-		GLSZMCSV << "GLSZMFeatures2Dvmrg" << "," << features[i] << ",";
-		GLSZMCSV << GLSZMData[i];
-		GLSZMCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		GLSZMFeat.defineGLSZMFeatures(features);
+		for (int i = 0; i < GLSZMData.size(); i++) {
+			GLSZMCSV << "GLSZMFeatures2Dvmrg" << "," << features[i] << ",";
+			GLSZMCSV << GLSZMData[i];
+			GLSZMCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		features.clear();
+		GLSZMFeat.defineGLSZMFeaturesOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "2Dvmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < GLSZMData.size(); i++) {
+			GLSZMCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			GLSZMCSV << GLSZMData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			GLSZMCSV << "\n";
+		}
+
 	}
 	GLSZMCSV.close();
 }
@@ -381,6 +412,26 @@ void GLSZMFeatures2DMRG<T, R>::defineGLSZMFeatures(vector<string> &features){
     features.push_back("Zone size variance");
     features.push_back("Zone size entropy");
 
+}
+
+template <class T, size_t R>
+void GLSZMFeatures2DMRG<T, R>::defineGLSZMFeaturesOntology(vector<string> &features) {
+	features.push_back("Fszm.sze");
+	features.push_back("Fszm.lze");
+	features.push_back("Fszm.lgze");
+	features.push_back("Fszm.hgze");
+	features.push_back("Fszm.szlge");
+	features.push_back("Fszm.szhge");
+	features.push_back("Fszm.lzlge");
+	features.push_back("Fszm.lzhge");
+	features.push_back("Fszm.glnu");
+	features.push_back("Fszm.glnu.norm");
+	features.push_back("Fszm.zsnu");
+	features.push_back("Fszm.zsnu.norm");
+	features.push_back("Fszm.z.perc");
+	features.push_back("Fszm.gl.var");
+	features.push_back("Fszm.zs.var");
+	features.push_back("Fszm.zs.entr");
 }
 
 

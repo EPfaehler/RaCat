@@ -25,10 +25,10 @@ class GLRLMFeatures2DFullMerge : GLRLMFeatures<T,R>  {
         int directionY;
 
         int maxRunLength;
-        vector<double> actualSpacing;
+        vector<float> actualSpacing;
         string normGLRLM;
-		vector<double> emphasisValues;
-        boost::multi_array<double,2> createGLRLMatrixFullMerge(boost::multi_array<T, R> inputMatrix, int depth, int ang);
+		vector<float> emphasisValues;
+        boost::multi_array<float,2> createGLRLMatrixFullMerge(boost::multi_array<T, R> inputMatrix, int depth, int ang);
         void extractGLRLMDataFullMerge(vector<T> &glrlmData, GLRLMFeatures2DFullMerge<T, R> glrlmFeatures);
 
 
@@ -40,10 +40,10 @@ class GLRLMFeatures2DFullMerge : GLRLMFeatures<T,R>  {
         float powRow;
         float powCol;
 
-        void calculateAllGLRLMFeatures2DFullMerge(GLRLMFeatures2DFullMerge<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, vector<double> spacing, ConfigFile config);
+        void calculateAllGLRLMFeatures2DFullMerge(GLRLMFeatures2DFullMerge<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, vector<float> spacing, ConfigFile config);
         void writeCSVFileGLRLM2DFullMerge(GLRLMFeatures2DFullMerge<T,R> glrlmFeat, string outputFolder);
         void writeOneFileGLRLM2DFullMerge(GLRLMFeatures2DFullMerge<T, R> glrlmFeat, string outputFolder);
-		void fill2DMatrices2DFullMerge(boost::multi_array<T, R> inputMatrix, boost::multi_array<double,2> &glrlMatrix, int depth, int ang);
+		void fill2DMatrices2DFullMerge(boost::multi_array<T, R> inputMatrix, boost::multi_array<float,2> &glrlMatrix, int depth, int ang);
 
 };
 
@@ -56,11 +56,11 @@ In the method createGLRLMatrixFullMerge the GLRLM-matrix for the given angle and
 @param[out]: GLCM-matrix
 */
 template <class T, size_t R>
-boost::multi_array<double,2> GLRLMFeatures2DFullMerge<T, R>::createGLRLMatrixFullMerge(boost::multi_array<T,R> inputMatrix, int depth, int ang){
+boost::multi_array<float,2> GLRLMFeatures2DFullMerge<T, R>::createGLRLMatrixFullMerge(boost::multi_array<T,R> inputMatrix, int depth, int ang){
     int sizeMatrix = this->diffGreyLevels.size();
     glrlm.getXYDirections(directionX, directionY, 180);
 
-    boost::multi_array<double,2> GLRLMatrix(boost::extents[sizeMatrix][maxRunLength]);
+    boost::multi_array<float,2> GLRLMatrix(boost::extents[sizeMatrix][maxRunLength]);
 
     fill2DMatrices2DFullMerge(inputMatrix, GLRLMatrix, depth, ang);
 
@@ -83,7 +83,7 @@ for every grey level, the run length is determined \n
 he corresponding element of the GLRLMatrix is increased
 */
 template <class T, size_t R>
-void GLRLMFeatures2DFullMerge<T, R>::fill2DMatrices2DFullMerge(boost::multi_array<T, R> inputMatrix, boost::multi_array<double,2> &glrlMatrix, int depth, int ang){
+void GLRLMFeatures2DFullMerge<T, R>::fill2DMatrices2DFullMerge(boost::multi_array<T, R> inputMatrix, boost::multi_array<float,2> &glrlMatrix, int depth, int ang){
 
     T actGreyLevel = 0;
     T actElement = 0;
@@ -135,7 +135,7 @@ void GLRLMFeatures2DFullMerge<T, R>::fill2DMatrices2DFullMerge(boost::multi_arra
 }
 
 template <class T, size_t R>
-void GLRLMFeatures2DFullMerge<T, R>::calculateAllGLRLMFeatures2DFullMerge(GLRLMFeatures2DFullMerge<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, vector<double> spacing, ConfigFile config){
+void GLRLMFeatures2DFullMerge<T, R>::calculateAllGLRLMFeatures2DFullMerge(GLRLMFeatures2DFullMerge<T,R> &glrlmFeatures, boost::multi_array<T, R> inputMatrix, vector<T> diffGrey, vector<T> vectorMatrElem, vector<float> spacing, ConfigFile config){
     this->diffGreyLevels = diffGrey;
 
     actualSpacing = spacing;
@@ -158,8 +158,8 @@ void GLRLMFeatures2DFullMerge<T, R>::calculateAllGLRLMFeatures2DFullMerge(GLRLMF
     T sumRunLengthVar = 0;
     T sumRunEntropy = 0;
 
-    vector<double> rowSums;
-    vector<double> colSums;
+    vector<float> rowSums;
+    vector<float> colSums;
 
     double meanGrey;
     double meanRun;
@@ -168,13 +168,13 @@ void GLRLMFeatures2DFullMerge<T, R>::calculateAllGLRLMFeatures2DFullMerge(GLRLMF
 
     maxRunLength = glrlm.getMaxRunLength(inputMatrix);
 
-    boost::multi_array<double, 2> sum(boost::extents[this->diffGreyLevels.size()][maxRunLength]);
+    boost::multi_array<float, 2> sum(boost::extents[this->diffGreyLevels.size()][maxRunLength]);
     float weight;
     int ang;
     for(int depth = 0; depth < totalDepth; depth++){
         for(int i = 0; i < 4; i++){
             ang = 180-i*45;
-            boost::multi_array<double,2> glrlMatrix = glrlmFeatures.createGLRLMatrixFullMerge(inputMatrix, depth, ang);
+            boost::multi_array<float,2> glrlMatrix = glrlmFeatures.createGLRLMatrixFullMerge(inputMatrix, depth, ang);
             weight = calculateWeight2D(directionX, directionY, normGLRLM, actualSpacing);
             multSkalarMatrix(glrlMatrix, weight);
             matrixSum(sum, glrlMatrix);
@@ -188,7 +188,7 @@ void GLRLMFeatures2DFullMerge<T, R>::calculateAllGLRLMFeatures2DFullMerge(GLRLMF
 
     colSums = glrlmFeatures.calculateColSums(sum);
 
-    boost::multi_array<double,2> probMatrix = glrlmFeatures.calculateProbMatrix(sum, totalSum);
+    boost::multi_array<float,2> probMatrix = glrlmFeatures.calculateProbMatrix(sum, totalSum);
     meanGrey = glrlmFeatures.calculateMeanProbGrey(probMatrix);
     meanRun = glrlmFeatures.calculateMeanProbRun(probMatrix);
     glrlmFeatures.calculateShortRunEmphasis(rowSums, totalSum);

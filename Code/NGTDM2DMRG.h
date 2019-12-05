@@ -24,10 +24,10 @@ class NGTDMFeatures2DMRG {
 
 private:
 	//values for weighting the entries (novel and uncommon features)
-	vector<double> actualSpacing;
+	vector<float> actualSpacing;
 	string normNGTDM;
 	int dist;
-	boost::multi_array<double, 2> getNGTDMatrix(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> neighborHoodSum);
+	boost::multi_array<float, 2> getNGTDMatrix(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> neighborHoodSum);
 
 	void extractNGTDMData(vector<T> &ngtdmData, NGTDMFeatures2DMRG<T, R> NGTDMFeatures2DMRG);
 
@@ -39,21 +39,22 @@ public:
 	double complexity;
 	double strength;
 
-	void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix);
-	double calculateSumSi(boost::multi_array<double, 2> ngtdm);
-	double calculateSumSiPi(boost::multi_array<double, 2> ngtdm);
-	int getNGP(boost::multi_array<double, 2> ngtdm);
-	int getNV(boost::multi_array<double, 2> ngtdm);
+	void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix);
+	double calculateSumSi(boost::multi_array<float, 2> ngtdm);
+	double calculateSumSiPi(boost::multi_array<float, 2> ngtdm);
+	int getNGP(boost::multi_array<float, 2> ngtdm);
+	int getNV(boost::multi_array<float, 2> ngtdm);
 
-	void calculateStrength(boost::multi_array<double, 2> ngtdm);
-	void calculateComplexity(boost::multi_array<double, 2> ngtdm);
-	void calculateCoarseness(boost::multi_array<double, 2> ngtdm);
-	void calculateContrast(boost::multi_array<double, 2> ngtdm);
-	void calculateBusyness(boost::multi_array<double, 2> ngtdm);
-	void calculateAllNGTDMFeatures2DMRG(NGTDMFeatures2DMRG<T, R> &ngtdm, Image<T, R> imageAttr, boost::multi_array<T,R> neighborHoodSum, vector<double> spacing, ConfigFile config);
+	void calculateStrength(boost::multi_array<float, 2> ngtdm);
+	void calculateComplexity(boost::multi_array<float, 2> ngtdm);
+	void calculateCoarseness(boost::multi_array<float, 2> ngtdm);
+	void calculateContrast(boost::multi_array<float, 2> ngtdm);
+	void calculateBusyness(boost::multi_array<float, 2> ngtdm);
+	void calculateAllNGTDMFeatures2DMRG(NGTDMFeatures2DMRG<T, R> &ngtdm, Image<T, R> imageAttr, boost::multi_array<T,R> neighborHoodSum, vector<float> spacing, ConfigFile config);
 	void writeCSVFileNGTDM(NGTDMFeatures2DMRG<T, R> ngtdm, string outputFolder);
-	void writeOneFileNGTDM(NGTDMFeatures2DMRG<T, R> ngtdm, string outputFolder);
+	void writeOneFileNGTDM(NGTDMFeatures2DMRG<T, R> ngtdm, ConfigFile config, int &parameterSpaceNr);
 	void defineNGTDMFeatures2DMRG(vector<string> &features);
+	void defineNGTDMFeatures2DMRGOntology(vector<string> &features);
 };
 
 /*!
@@ -65,8 +66,8 @@ public:
 The function fills the NGTDMatrix with the corresponding values
 */
 template <class T, size_t R>
-boost::multi_array<double, 2> NGTDMFeatures2DMRG<T, R>::getNGTDMatrix(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> neighborHoodSum) {
-	typedef boost::multi_array<double, 2>  ngtdmat;
+boost::multi_array<float, 2> NGTDMFeatures2DMRG<T, R>::getNGTDMatrix(boost::multi_array<T, R> inputMatrix, boost::multi_array<T, R> neighborHoodSum) {
+	typedef boost::multi_array<float, 2>  ngtdmat;
 	int sizeMatrix = diffGreyLevels.size();
 	ngtdmat NGTDMatrix(boost::extents[sizeMatrix][3]);
 	int indexOfElement[3] = { 0,0,0 };
@@ -112,7 +113,7 @@ boost::multi_array<double, 2> NGTDMFeatures2DMRG<T, R>::getNGTDMatrix(boost::mul
 The function calculates the probability matrix of the NGTD matrix, as many features are calculated using the probabilities.
 */
 template <class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<double, 2> &ngtdMatrix) {
+void NGTDMFeatures2DMRG<T, R>::getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix) {
 	int numItem = 0;
 	for (int actElementIndex = 0; actElementIndex<diffGreyLevels.size(); actElementIndex++) {
 		numItem += ngtdMatrix[actElementIndex][0];
@@ -130,7 +131,7 @@ void NGTDMFeatures2DMRG<T, R>::getProbability(vector<T> elementsOfWholeNeighborh
 This function returns the number of discretized grey values that have a probability >0
 */
 template<class T, size_t R>
-int NGTDMFeatures2DMRG<T, R>::getNGP(boost::multi_array<double, 2> ngtdm) {
+int NGTDMFeatures2DMRG<T, R>::getNGP(boost::multi_array<float, 2> ngtdm) {
 	int ngp = 0;
 	for (int i = 0; i< ngtdm.shape()[0]; i++) {
 		if (ngtdm[i][0] != 0) {
@@ -148,7 +149,7 @@ int NGTDMFeatures2DMRG<T, R>::getNGP(boost::multi_array<double, 2> ngtdm) {
 This function returns the sum of all numbers of voxels in each neighborhood
 */
 template<class T, size_t R>
-int NGTDMFeatures2DMRG<T, R>::getNV(boost::multi_array<double, 2> ngtdm) {
+int NGTDMFeatures2DMRG<T, R>::getNV(boost::multi_array<float, 2> ngtdm) {
 	int nv = 0;
 	for (int i = 0; i< ngtdm.shape()[0]; i++) {
 		if (!isnan(ngtdm[i][0])) {
@@ -165,7 +166,7 @@ int NGTDMFeatures2DMRG<T, R>::getNV(boost::multi_array<double, 2> ngtdm) {
 @param[out] int sumSiPi : sum over all products of column entries
 */
 template<class T, size_t R>
-double NGTDMFeatures2DMRG<T, R>::calculateSumSiPi(boost::multi_array<double, 2> ngtdm) {
+double NGTDMFeatures2DMRG<T, R>::calculateSumSiPi(boost::multi_array<float, 2> ngtdm) {
 	double sumSiPi = 0;
 	for (int row = 0; row<ngtdm.shape()[0]; row++) {
 		if (!isnan(ngtdm[row][1] * ngtdm[row][2])) {
@@ -182,7 +183,7 @@ double NGTDMFeatures2DMRG<T, R>::calculateSumSiPi(boost::multi_array<double, 2> 
 @param[out] int sumSi : sum over all si
 */
 template<class T, size_t R>
-double NGTDMFeatures2DMRG<T, R>::calculateSumSi(boost::multi_array<double, 2> ngtdm) {
+double NGTDMFeatures2DMRG<T, R>::calculateSumSi(boost::multi_array<float, 2> ngtdm) {
 	double sumSi = 0;
 	for (int row = 0; row<ngtdm.shape()[0]; row++) {
 		if (!isnan(ngtdm[row][2])) {
@@ -201,7 +202,7 @@ This function calculate the coarseness of the VOI. The coarseness is an indicato
 \f$ F_{coarseness} = \frac{1}{\sum{i=1}^{N_{g}}p_{i}s{i}}\f$
 */
 template<class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::calculateCoarseness(boost::multi_array<double, 2> ngtdm) {
+void NGTDMFeatures2DMRG<T, R>::calculateCoarseness(boost::multi_array<float, 2> ngtdm) {
 	double sumSiPi = calculateSumSiPi(ngtdm);
 	if (sumSiPi != 0) {
 		coarseness = 1 / sumSiPi;
@@ -219,7 +220,7 @@ This function calculate the contrast of the VOI. The value gives information abo
 \f$ F_{contrast} = ( \frac{1}{N_{g, p}(N_{g, p}-1)}\sum{i=1}^{N_{g}}\sum{j=1}^{N_{g}}p_{i}p{j}(i-j)^{2} )\frac{1}\sum{i=1}^{N_{g}} s_{i}}\f$
 */
 template<class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::calculateContrast(boost::multi_array<double, 2> ngtdm) {
+void NGTDMFeatures2DMRG<T, R>::calculateContrast(boost::multi_array<float, 2> ngtdm) {
 	int ng = getNGP(ngtdm);
 	int nv = getNV(ngtdm);
 	contrast = 0;
@@ -245,7 +246,7 @@ This function calculate the busyness of the VOI. It gives information about rapi
 \f$ F_{busyness} = ( \frac{\sum{i=1}^{N_{g}}p_{i}s_{i}}{\sum{j=1}^{N_{g}\sum{j=1}^{N_{g}|ip_{i}-jp_{j}|}\f$
 */
 template<class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::calculateBusyness(boost::multi_array<double, 2> ngtdm) {
+void NGTDMFeatures2DMRG<T, R>::calculateBusyness(boost::multi_array<float, 2> ngtdm) {
 	double sumSiPi = calculateSumSiPi(ngtdm);
 	double denominator = 0;
 	int ng = getNGP(ngtdm);
@@ -277,7 +278,7 @@ This function calculates the complexity of the VOI. It gives also information ab
 \f$ F_{complexity} = ( \frac{1}{N_{v}} \sum{i=1}^{N_{g}}\sum{j=1}^{N_{g}}|i-j|\frac{p_{i}s_{i}+p_{j}s_{j}}{p_{i}+p_{j}}\f$
 */
 template<class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::calculateComplexity(boost::multi_array<double, 2> ngtdm) {
+void NGTDMFeatures2DMRG<T, R>::calculateComplexity(boost::multi_array<float, 2> ngtdm) {
 	int ng = getNGP(ngtdm);
 	int nv = getNV(ngtdm);
 	complexity = 0;
@@ -311,7 +312,7 @@ This function calculates the strength of the VOI. It gives also information abou
 \f$ F_{strength} = ( \frac{\sum{i=1}^{N_{g}}\sum{j=1}^{N_{g}}(p_{i}+p_{j})j)^{2}}{\sum_{i=1}{N_{g}}s_{i}}\f$
 */
 template<class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::calculateStrength(boost::multi_array<double, 2> ngtdm) {
+void NGTDMFeatures2DMRG<T, R>::calculateStrength(boost::multi_array<float, 2> ngtdm) {
 	strength = 0;
 	double sumSi = calculateSumSi(ngtdm);
 	for (int row = 0; row < ngtdm.shape()[0]; row++) {
@@ -331,12 +332,12 @@ void NGTDMFeatures2DMRG<T, R>::calculateStrength(boost::multi_array<double, 2> n
 
 
 template <class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::calculateAllNGTDMFeatures2DMRG(NGTDMFeatures2DMRG<T, R> &ngtdm, Image<T, R> imageAttr, boost::multi_array<T, R> neighborHoodSum, vector<double> spacing, ConfigFile config) {
+void NGTDMFeatures2DMRG<T, R>::calculateAllNGTDMFeatures2DMRG(NGTDMFeatures2DMRG<T, R> &ngtdm, Image<T, R> imageAttr, boost::multi_array<T, R> neighborHoodSum, vector<float> spacing, ConfigFile config) {
 	dist = config.dist;
 	this->diffGreyLevels = imageAttr.diffGreyLevels;
 	actualSpacing = spacing;
 	normNGTDM = config.normNGTDM;
-	boost::multi_array<double, 2> ngtdmMatrix = getNGTDMatrix(imageAttr.imageMatrix, neighborHoodSum);
+	boost::multi_array<float, 2> ngtdmMatrix = getNGTDMatrix(imageAttr.imageMatrix, neighborHoodSum);
 	calculateCoarseness(ngtdmMatrix);
 	calculateContrast(ngtdmMatrix);
 	calculateBusyness(ngtdmMatrix);
@@ -366,21 +367,51 @@ void NGTDMFeatures2DMRG<T, R>::writeCSVFileNGTDM(NGTDMFeatures2DMRG<T, R> ngtdmF
 }
 
 template <class T, size_t R>
-void NGTDMFeatures2DMRG<T, R>::writeOneFileNGTDM(NGTDMFeatures2DMRG<T, R> ngtdmFeatures, string outputFolder) {
-	string csvName = outputFolder + ".csv";
+void NGTDMFeatures2DMRG<T, R>::writeOneFileNGTDM(NGTDMFeatures2DMRG<T, R> ngtdmFeatures, ConfigFile config, int &parameterSpaceNr) {
+	string csvName;
+	if (config.csvOutput == 1) {
+		csvName = config.outputFolder + ".csv";
+	}
+	else if (config.ontologyOutput == 1) {
+		csvName = config.outputFolder + "/feature_table.csv";
+	}
 	char * name = new char[csvName.size() + 1];
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
 	ofstream ngtdmCSV;
 	ngtdmCSV.open(name, std::ios_base::app);
 	vector<string> features;
-	defineNGTDMFeatures2DMRG(features);
 	vector<T> ngtdmData;
 	extractNGTDMData(ngtdmData, ngtdmFeatures);
-	for (int i = 0; i< ngtdmData.size(); i++) {
-		ngtdmCSV << "ngtdmFeatures2Dmrg" << "," << features[i] << ",";
-		ngtdmCSV << ngtdmData[i];
-		ngtdmCSV << "\n";
+	
+	if (config.csvOutput == 1) {
+		defineNGTDMFeatures2DMRG(features);
+		for (int i = 0; i < ngtdmData.size(); i++) {
+			ngtdmCSV << "ngtdmFeatures2Dmrg" << "," << features[i] << ",";
+			ngtdmCSV << ngtdmData[i];
+			ngtdmCSV << "\n";
+		}
+	}
+	else if (config.ontologyOutput == 1) {
+		defineNGTDMFeatures2DMRGOntology(features);
+		string featParamSpaceTable = config.outputFolder + "/FeatureParameterSpace_table.csv";
+		char * featParamSpaceTableName = new char[featParamSpaceTable.size() + 1];
+		std::copy(featParamSpaceTable.begin(), featParamSpaceTable.end(), featParamSpaceTableName);
+		featParamSpaceTableName[featParamSpaceTable.size()] = '\0';
+
+		ofstream featSpaceTable;
+		featSpaceTable.open(featParamSpaceTableName, std::ios_base::app);
+		parameterSpaceNr += 1;
+		string parameterSpaceName = "FeatureParameterSpace_" + std::to_string(parameterSpaceNr);
+		featSpaceTable << parameterSpaceName << "," << "2Dmrg" << "," << config.imageSpaceName << "," << config.interpolationMethod << "\n";
+		featSpaceTable.close();
+
+		for (int i = 0; i < ngtdmData.size(); i++) {
+			ngtdmCSV << config.patientID << "," << config.patientLabel << "," << features[i] << ",";
+			ngtdmCSV << ngtdmData[i] << "," << parameterSpaceName << "," << config.calculationSpaceName;
+			ngtdmCSV << "\n";
+		}
+
 	}
 	ngtdmCSV.close();
 }
@@ -393,6 +424,15 @@ void NGTDMFeatures2DMRG<T, R>::defineNGTDMFeatures2DMRG(vector<string> &features
 	features.push_back("busyness");
 	features.push_back("complexity");
 	features.push_back("strength");
+}
+
+template <class T, size_t R>
+void NGTDMFeatures2DMRG<T, R>::defineNGTDMFeatures2DMRGOntology(vector<string> &features) {
+	features.push_back("Fngt.coarseness");
+	features.push_back("Fngt.contrast");
+	features.push_back("Fngt.busyness");
+	features.push_back("Fngt.complexity");
+	features.push_back("Fngt.strength");
 }
 
 

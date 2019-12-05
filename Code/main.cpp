@@ -115,9 +115,11 @@ Example files for config, feature selection, and patient information are stored 
 			arguments[6] = string(argv[i]);
 		}
 		//get path to feature selection
-		else if (arg == "--fts") {
+		else if (arg == "--fod") {
 			i++;
+			std::cout << "feat" << std::endl;
 			arguments[7] = string(argv[i]);
+			
 		}
 		//call the help
 		else if (arg == "--h") {
@@ -137,7 +139,7 @@ Example files for config, feature selection, and patient information are stored 
 		else if (arguments[0] == "--h") {
 				std::cout << "help" << std::endl;
 				std::cout << "The following parameters have to be set (IF mask is a binary image): \n --ini: location of ini file  \n --pat: location of patient info file (obligatory for PET images, for other images not required)"  << std::endl;
-				std::cout << "--fts location of featureSelection file (optional, if not set, all feature values are calculated." << std::endl;
+				std::cout << "--fod location of featureOutputDefinition file (optional, if not set, all feature values are calculated." << std::endl;
 				std::cout << "--img: location of image or project file \n --voi: location of mask/voi file" << std::endl;
 				std::cout << "--out: location of desired output folder" << std::endl;
 				std::cout << "IF mask is RT struct, --voi has to be replaced by --rts: \n --ini: location of ini file  \n --pat: location of patient info file" << std::endl;
@@ -148,6 +150,7 @@ Example files for config, feature selection, and patient information are stored 
 		}
 
 	}
+
 	if (arguments[6] == "0") {
 		std::cout << "No patientInfo location has been set." << std::endl;
 	}
@@ -162,20 +165,26 @@ Example files for config, feature selection, and patient information are stored 
 		config.useFixedBinWidth = 0;
 		//change output folder name
 		config.outputFolder = originalOutputname + "FXDBin";
-		config.createOutputFolder(config);
+		if (config.csvOutput == 1) {
+			config.createOutputFile(config);
+		}
 		prepareDataForFeatureCalculation(config);
 		config.copyConfigFile(config.outputFolder);
 		
 		config.useFixedBinWidth = 1;
 		config.useFixedNrBins = 0;
 		config.outputFolder = originalOutputname + "FXDWidth";
-		config.createOutputFolder(config);
+		if (config.csvOutput == 1) {
+			config.createOutputFile(config);
+		}
 		prepareDataForFeatureCalculation(config);
 		config.copyConfigFile(config.outputFolder);
 		
 	}
 	else{
-		config.createOutputFolder(config);
+		if (config.csvOutput == 1) {
+			config.createOutputFile(config);
+		}
 		prepareDataForFeatureCalculation(config);
 		config.copyConfigFile(config.outputFolder);
 	}
