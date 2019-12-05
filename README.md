@@ -1,3 +1,16 @@
+There is a new RaCaT version only (version 1.18).
+The main changes to the previous version are:
+
+- fixing of some bugs (volume, NGTDM3D and GLDZM3D)
+
+- the configuration file looks different:
+   [Interpolation]: If you want to resample the image to cubic voxels before feature calculation, you can set now: 
+   UseSamplingToCubic= 1 and can then choose the desired voxel size in the line:
+   CubicVoxelSize  = 2 (here we set it to 2 mm)
+   [OutputInformation]: If you want to overwrite already existing .csv files, you can set OverwriteCSV = 1
+   
+   
+
 A detailed documentation about how to use RaCaT and how to run it from source can be found in the documentation folder. However, here a short overview:
 
 In order to make the RaCaT run from source, follow the following steps:
