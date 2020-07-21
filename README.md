@@ -46,8 +46,11 @@ Download the files of this repository.
    The Radiomics Toolbox needs also the boost library. Download the source code from here: http://www.boost.org/users/history/version_1_61_0.html and unpack the folder.
    We have to install some boost libraries:
    - Go to the folder, where you unpacked the boost libraries
-   - Type following command in command line: ./bootstrap.sh 
-   - Type the command: ./b2 install
+   - Go to the directory tools\build\.
+   - Run bootstrap.bat
+   - Run b2 install --prefix=PREFIX where PREFIX is the directory where you want Boost.Build to be installed
+   - Add PREFIX\bin to your PATH environment variable.
+
    Boost is installed.
 
 5. Use CMakeList to configure, generate and compile Radiomics.exe
