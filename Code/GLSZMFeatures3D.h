@@ -211,8 +211,8 @@ boost::multi_array<float, 2> GLSZMFeatures3D<T,R>::getGLSZMMatrix3D( boost::mult
 	maxZoneSize = inputMatrix.shape()[0] * inputMatrix.shape()[1] * inputMatrix.shape()[2];
     int sizeMatrix= (this->diffGreyLevels).size();
     GLSZMat GLSZMatrix(boost::extents[sizeMatrix][maxZoneSize]);
+	
     fill3DGLSZMatrices(inputMatrix, GLSZMatrix);
-
 	GLSZMat smallGLSZM(boost::extents[sizeMatrix][maxZoneSize]);
 	for (int row = 0; row < sizeMatrix; row++) {
 		for (int col = 0; col < maxZoneSize; col++) {
@@ -227,13 +227,11 @@ template <class T, size_t R>
 void GLSZMFeatures3D<T, R>::calculateAllGLSZMFeatures3D(GLSZMFeatures3D<T,R> &GLSZMFeatures, Image<T,R> imageAttr, ConfigFile config){
     this->diffGreyLevels = imageAttr.diffGreyLevels;
 	GLSZMFeatures.getConfigValues(config);
-    boost::multi_array<float,2> GLSZM=GLSZMFeatures.getGLSZMMatrix3D(imageAttr.imageMatrix, imageAttr.vectorOfMatrixElements);
 
+    boost::multi_array<float,2> GLSZM=GLSZMFeatures.getGLSZMMatrix3D(imageAttr.imageMatrix, imageAttr.vectorOfMatrixElements);
     float totalSum = GLSZMFeatures.calculateTotalSum(GLSZM);
     rowSums=GLSZMFeatures.calculateRowSums(GLSZM);
     colSums = GLSZMFeatures.calculateColSums(GLSZM);
-
-
     GLSZMFeatures.calculateShortRunEmphasis(rowSums, totalSum);
     GLSZMFeatures.calculateLongRunEmphasis(rowSums, totalSum);
     GLSZMFeatures.calculateLowGreyEmph(colSums, totalSum);

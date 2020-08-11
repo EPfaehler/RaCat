@@ -79,35 +79,35 @@ class GLCMFeatures{
 		}
 
         //!define the different feature values of the GLCM matrix
-        T jointMaximum;
-        T jointAverage;
-        T jointVariance;
-        T jointEntropy;
-        T diffAverage;
-        T diffVariance;
-        T diffEntropy;
-        T sumAverage;
-        T sumVariance;
-        T sumEntropy;
-        T angSecMoment;
-        T contrast;
-        T dissimilarity;
-        T inverseDiff;
-        T inverseDiffNorm;
-        T inverseDiffMom;
-        T inverseDiffMomNorm;
-        T inverseVar;
-        T meanRowProb;
-        T meanColProb;
-        T stdRowProb;
-        T stdColProb;
-        T autoCorrelation;
-        T correlation;
-        T clusterTendency;
-        T clusterShade;
-        T clusterProminence;
-        T firstMCorrelation;
-        T secondMCorrelation;
+        T jointMaximum =NAN;
+        T jointAverage = NAN;
+        T jointVariance = NAN;
+        T jointEntropy = NAN;
+        T diffAverage = NAN;
+        T diffVariance = NAN;
+        T diffEntropy = NAN;
+        T sumAverage = NAN;
+        T sumVariance = NAN;
+        T sumEntropy = NAN;
+        T angSecMoment = NAN;
+        T contrast = NAN;
+        T dissimilarity = NAN;
+        T inverseDiff = NAN;
+        T inverseDiffNorm = NAN;
+        T inverseDiffMom = NAN;
+        T inverseDiffMomNorm = NAN;
+        T inverseVar = NAN;
+        T meanRowProb = NAN;
+        T meanColProb = NAN;
+        T stdRowProb = NAN;
+        T stdColProb = NAN;
+        T autoCorrelation = NAN;
+        T correlation = NAN;
+        T clusterTendency = NAN;
+        T clusterShade = NAN;
+        T clusterProminence = NAN;
+        T firstMCorrelation = NAN;
+        T secondMCorrelation = NAN;
 
 
         void getXYDirections(int &directionX, int &directionY, int angle);
@@ -817,6 +817,7 @@ void GLCMFeatures<T,R>::calculateFirstMCorrelation(boost::multi_array<float, 2> 
         actualProbRows = sumProbRows[i];
         if(actualProbRows != 0){
             HX -= actualProbRows*log2(actualProbRows);
+			
             for(int j = 0; j < N_g; j++){
                 actualProbCols = sumProbCols[j];
                 if(actualProbCols!= 0 && glcMatrix[i][j] != 0 &&!isnan(glcMatrix[i][j])&&actualProbRows!=0){
@@ -828,6 +829,9 @@ void GLCMFeatures<T,R>::calculateFirstMCorrelation(boost::multi_array<float, 2> 
     }
 	if (HX > 0) {
 		firstMCorrelation = (HXY - HXY1) / HX;
+	}
+	else {
+		firstMCorrelation = 0;
 	}
 }
 

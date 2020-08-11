@@ -59,22 +59,22 @@ class GLRLMFeatures  {
 
         }
 
-        float shortRunEmphasis;
-        float longRunEmphasis;
-        float lowGreyEmph;
-        float highGreyEmph;
-        float shortRunLow;
-        float shortRunHigh;
-        float longRunLowEmph;
-        float longRunHighEmph;
-        float greyNonUniformity;
-        float greyNonUniformityNorm;
-        float runLengthNonUniformity;
-        float runLengthNonUniformityNorm;
-        float runPercentage;
-        float greyLevelVar;
-        float runLengthVar;
-        float runEntropy;
+        float shortRunEmphasis=NAN;
+        float longRunEmphasis = NAN;
+        float lowGreyEmph = NAN;
+        float highGreyEmph = NAN;
+        float shortRunLow = NAN;
+        float shortRunHigh = NAN;
+        float longRunLowEmph = NAN;
+        float longRunHighEmph = NAN;
+        float greyNonUniformity = NAN;
+        float greyNonUniformityNorm = NAN;
+        float runLengthNonUniformity = NAN;
+        float runLengthNonUniformityNorm = NAN;
+        float runPercentage = NAN;
+        float greyLevelVar = NAN;
+        float runLengthVar = NAN;
+        float runEntropy = NAN;
 
         vector<float> calculateRowSums(boost::multi_array<float,2> glrlmatrix);
         vector<float> calculateColSums(boost::multi_array<float,2> glrlmatrix);

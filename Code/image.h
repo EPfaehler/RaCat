@@ -84,7 +84,7 @@ public:
 
 	//constructor
 	Image(unsigned int row, unsigned int col, unsigned int depth);
-	~Image();
+	~Image( );
 
 	void createOntologyVoxelDimensionTable(ConfigFile config, float voxelSize[3]);
 	//interpolate the image mask
@@ -260,6 +260,7 @@ ImageType::Pointer Image<T, R>::getResampledImage(ImageType *originalImage, doub
 	//if interpolation method is trilinear
 	if (interpolationMethod == "Linear" || interpolationMethod == "linear") {
 		interpolator= InterpolatorType::New();
+		resizeFilterImage->SetOutputOrigin(originalImage->GetOrigin());
 		resizeFilterImage->SetInterpolator(interpolator);
 	}
 	//if interpolation method is spline
@@ -301,7 +302,7 @@ ImageType::Pointer Image<T, R>::getResampledImage(ImageType *originalImage, doub
 	resizeFilterImage->Update();
 
 	ImageType::Pointer newImage = resizeFilterImage->GetOutput();
-	
+	originalImage = nullptr;
 	return resizeFilterImage->GetOutput();
 	
 }
@@ -316,21 +317,21 @@ It can vary from 1 - 100. The value inside the mask is needed in order to create
 */
 template <class T, size_t R>
 int Image<T, R>::getValueInMask(ImageType::Pointer mask) {
-	int maskValue = 0;
-	int row = 0;
-	int actPosition = 0;
-	const typename ImageType::RegionType region = mask->GetBufferedRegion();
-	const typename ImageType::SizeType imageSize = region.GetSize();
-	while (actPosition < imageSize[0] * imageSize[1] * imageSize[2]) {
-		if (mask->GetBufferPointer()[actPosition] > 0) {
-			if (mask->GetBufferPointer()[actPosition] > maskValue) {
-				maskValue = mask->GetBufferPointer()[actPosition];
+	
+	itk::ImageRegionIterator<ImageType> countVoxels(mask, mask->GetLargestPossibleRegion());
+	countVoxels.GoToBegin();
 
-				
-			}
-			
+	float maskValue = 0;
+	while (!countVoxels.IsAtEnd())
+	{
+
+		if (countVoxels.Get() > maskValue)
+		{
+			maskValue = countVoxels.Get();
+
 		}
-		actPosition += 1;
+		++countVoxels;
+
 	}
 	return maskValue;
 }
@@ -371,6 +372,7 @@ boost::multi_array<T, R> Image<T, R>::get3Dimage(ImageType *image, ImageType *ma
 		scalFactor = 1;
 	}
 	//std::cout << "max mask" << maxValueInMask << std::endl;
+	
 	while (actPosition < imageSize[0] * imageSize[1] * imageSize[2]) {
 		if (row < imageSize[0] && depth < imageSize[2]) {
 			//if (mask->GetBufferPointer()[actPosition] >= config.threshold*maxValueInMask){
@@ -737,10 +739,8 @@ it calculates the SUV-values from the original image using the information given
 */
 template<class T, size_t R>
 void Image<T, R>::calculateSUV(boost::multi_array<T, R> &inputMatrix, ConfigFile config) {
-	std::cout << "Convert intensity values to SUV" << std::endl;
 	float correctionParam;
 	if (config.correctionParam != 0) {
-		std::cout << "The scaling factor is set. All image values will be multiplied by this parameter." << std::endl;
 		correctionParam = config.correctionParam;
 	}
 	
@@ -752,7 +752,6 @@ void Image<T, R>::calculateSUV(boost::multi_array<T, R> &inputMatrix, ConfigFile
 			for (int k = 0; k<inputMatrix.shape()[2]; k++) {
 				if (!std::isnan(inputMatrix[i][j][k])) {
 					inputMatrix[i][j][k] = inputMatrix[i][j][k] * correctionParam;
-					//std::cout << "SUV" << inputMatrix[i][j][k] << " ";
 				}
 			}
 		}
@@ -803,7 +802,6 @@ template<class T, size_t R>
 void Image<T, R>::getImageAttributes(ImageType *filteredImage, ImageType *maskFilter, ConfigFile config) {
 	image = filteredImage;
 	mask = maskFilter;
-	
 	//get image size
 	const typename ImageType::RegionType region = filteredImage->GetBufferedRegion();
 	const typename ImageType::SizeType imageSize = region.GetSize();
@@ -819,11 +817,11 @@ void Image<T, R>::getImageAttributes(ImageType *filteredImage, ImageType *maskFi
 	}
 	
 	if (config.useReSegmentation == 1) {
-		imageMatrixOriginal = get3Dimage(image, mask, config);
+		imageMatrixOriginal = get3Dimage(filteredImage, maskFilter, config);
 		vectorOfMatrixElementsOriginal = getVectorOfMatrixElementsNotNAN(imageMatrixOriginal);
-		imageMatrix = get3DimageResegmented(image, mask, config);
+		imageMatrix = get3DimageResegmented(filteredImage, maskFilter, config);
 		
-		imageMatrixLocalInt = get3DimageLocalInt(image, mask, config);
+		//imageMatrixLocalInt = get3DimageLocalInt(filteredImage, maskFilter, config);
 	}
 	else {
 		imageMatrix = get3Dimage(filteredImage, maskFilter, config);
@@ -843,6 +841,7 @@ void Image<T, R>::getImageAttributes(ImageType *filteredImage, ImageType *maskFi
 	}
 	vectorOfMatrixElements = getVectorOfMatrixElementsNotNAN(imageMatrix);
 	diffGreyLevels = getGreyLevels();
+	
 }
 
 /*!
@@ -864,9 +863,9 @@ void Image<T, R>::getImageAttributesDiscretized(ImageType *filteredImage, ImageT
 	const typename ImageType::SpacingType& inputSpacing = filteredImage->GetSpacing();
 
 	if (config.useReSegmentation == 1 ) {
-		imageMatrixOriginal = get3Dimage(image, mask, config);
+		imageMatrixOriginal = get3Dimage(filteredImage, maskFilter, config);
 		vectorOfMatrixElementsOriginal = getVectorOfMatrixElementsNotNAN(imageMatrixOriginal);
-		imageMatrix = get3DimageResegmented(image, mask, config);
+		imageMatrix = get3DimageResegmented(filteredImage, maskFilter, config);
 	}
 	else {
 		imageMatrix = get3Dimage(filteredImage, maskFilter, config);
@@ -884,7 +883,6 @@ void Image<T, R>::getImageAttributesDiscretized(ImageType *filteredImage, ImageT
 	}
 	vectorOfMatrixElements = getVectorOfMatrixElementsNotNAN(imageMatrix);
 	if (config.useFixedBinWidthIVH == 1 && config.discretizeIVHSeparated == 1) {
-		std::cout << "IVH" << " ";
 		imageMatrixIVH = imageMatrix;
 		discretizationFixedWidthIVH(imageMatrixIVH, config.binWidthIVH, config);
 	}

@@ -75,7 +75,7 @@ ImageType::Pointer constructEmptyNewImage(Image<T, 3> imageAttr, boost::multi_ar
 	region.SetSize(size);
 	return imageNew;
 }
-
+//convolve the image with a kernel
 ImageType::Pointer convolutionImage(ImageType::Pointer image, ImageType::Pointer kernel) {
 	using FilterType = itk::ConvolutionImageFilter<ImageType>;
 	FilterType::Pointer convolutionFilter = FilterType::New();
@@ -85,7 +85,7 @@ ImageType::Pointer convolutionImage(ImageType::Pointer image, ImageType::Pointer
 	return convolutionFilter->GetOutput();
 
 }
-
+//construct a new image 
 template<typename T>
 ImageType::Pointer constructNewImage(ImageType::Pointer actImage, boost::multi_array<T, 3> actualMatrix) {
 
@@ -111,10 +111,7 @@ ImageType::Pointer constructNewImage(ImageType::Pointer actImage, boost::multi_a
 
 	ImageType::IndexType start;
 	start.Fill(0);
-
 	region.SetIndex(start);
-
-
 
 	region.SetSize(size);
 
@@ -178,9 +175,6 @@ void getNGLDMatrix3D_convolution(Image<T, 3> imageAttr, boost::multi_array<float
 	for (int greyLevelNr = 0; greyLevelNr < sizeGreyLevels; greyLevelNr++) {
 		float actGreyLevel = (imageAttr.diffGreyLevels)[greyLevelNr];
 		//how many grey levels do I have
-
-		
-
 		ImageType::Pointer imageNew = constructEmptyNewImage(imageAttr, actualMatrix, 1);
 		ImageType::IndexType pixelIndex;
 		for (int depth = 1; depth < actualMatrix.shape()[2] + 1; depth++) {
@@ -236,10 +230,8 @@ void getNGLDMatrix3D_convolution(Image<T, 3> imageAttr, boost::multi_array<float
 		const typename ImageType::RegionType& imageRegion = imageNew->GetLargestPossibleRegion();
 		const typename ImageType::SizeType& imageSize = imageRegion.GetSize();
 
-
 		ImageType::Pointer sumImage = convolutionImage(imageNew, kernel);
 		ImageType::Pointer sumMask = convolutionImage(maskNew, kernel);
-
 
 		//get values of image and mask
 		Image<T, 3> imageElement(imageSize[0], imageSize[1], imageSize[2]);
@@ -263,8 +255,6 @@ void getNGLDMatrix3D_convolution(Image<T, 3> imageAttr, boost::multi_array<float
 					if (actualElement == actGreyLevel) {
 						//get the sum of the actual neighborhood
 						actualGreyIndex = ngldm.findIndex(imageAttr.diffGreyLevels, sizeGreyLevels, actualElement);
-						//only if distance of NGLDM and NGTDM matrices are the same, we can combine the calculations
-						//if not we have to calculate the NGLDM matrices separately what means more computational time
 						ngldm3D[actualGreyIndex][sumMatrix[row + 1][col + 1][depth + 1]] = ngldm3D[actualGreyIndex][sumMatrix[row + 1][col + 1][depth + 1]] + 1;
 					}
 					

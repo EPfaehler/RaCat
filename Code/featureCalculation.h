@@ -16,19 +16,16 @@
 #include <string>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
-
-#include "string"
+#include "processing.h"
+#include "dispersityFeatures.h"
 /*! \file */
 
 
-ImageType::Pointer thresholdMask(ImageType *mask, float threshold);
-void prepareDataForFeatureCalculation(ConfigFile config);
-void calculateFeaturesForConfig(ImageType *imageFiltered, ImageType *maskNewSpacing, ConfigFile config);
-ImageType::Pointer readVoiFilePET(string prjPath, string voiPath, ImageType *image, ConfigFile config, unsigned int(&dim)[3], float voxelSize[3]);
+void readImageAndMask(ConfigFile config);
+void calculateFeatures(ImageType *imageFiltered, ImageType *maskNewSpacing, ConfigFile config);
 void writeImageData2Log(ConfigFile config);
-void writeExactVolume(float volume, ConfigFile config);
-void calculatePETmetrics(ImageType::Pointer image, ImageType::Pointer mask, int volume, ConfigFile config);
-void writePETmetrics(float value, string nameVariable, ConfigFile config);
-float getOriginalVolume(ImageType::Pointer mask);
+ImageType::Pointer flipNII(ImageType::Pointer mask);
+int getNrVoxels(ImageType *mask, float threshold);
+
 #include "featureCalculation.cpp"
 #endif
