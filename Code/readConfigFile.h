@@ -217,6 +217,7 @@ class ConfigFile{
 		inline void getResegmentationState();
 		//!get the location of the featureSelection.ini
 		void getFeatureSelectionLocation(string featurePath);
+		void copyFeatureSelection();
         //! read the discretization information
         void getDiscretizationInformation();
 		//! read discretization information IVH
@@ -356,12 +357,44 @@ inline void ConfigFile::getFeatureSelectionLocation(string featPath) {
 	config pt = readIni(fileName);
 	if (featPath != "0") {
 		featureSelectionLocation = featPath;
+		copyFeatureSelection();
 	}
 	else {
 		calculateAllFeatures = 1;
 	}
 }
 
+
+inline void ConfigFile::copyFeatureSelection() {
+	ifstream fin;
+	fin.open(featureSelectionLocation, ios::in);
+	string iniName = featureSelectionLocation;
+
+	// Remove directory if present.
+	// Do this before extension removal incase directory has a period character.
+	const size_t last_slash_idx = iniName.find_last_of("\\/");
+	if (std::string::npos != last_slash_idx)
+	{
+		iniName.erase(0, last_slash_idx + 1);
+	}
+	ofstream fout;
+	string outputIniName = outputFolder + "_" + iniName;
+	fout.open(outputIniName, ios::out);
+	string content = "";
+	int i;
+
+	for (i = 0; fin.eof() != true; i++) // get content of infile
+		content += fin.get();
+
+	i--;
+	content.erase(content.end() - 1);     // erase last character
+
+	fin.close();
+
+	fout << content;                 // output
+	fout.close();
+
+}
 /*!
 The method getDiscretizationInformation reads the discretization information of the ini-file and
 sets the attributes of the class Config to the equivalent values
@@ -517,7 +550,8 @@ inline void ConfigFile::getImageFolder(string image, string voi) {
 	std::string nifti = ".nii";
 	niftiSlope = 1;
 	niftiIntercept = 0;
-	if (imageName.find(nifti) != string::npos) {
+	
+	if (imageName.substr(imageName.length() - 3) == nifti) {
 		typename ReaderType::Pointer reader = ReaderType::New();
 		reader->SetFileName(imageName);
 		try {
@@ -657,6 +691,15 @@ inline void ConfigFile::getDemographicInfo(string outputFolderName) {
 			}
 			outputFile.close();
 		}
+		else {
+			ofstream outputFile;
+			outputFile.open(name);
+			outputFile << "Patient Details" << "," << "Patient Name" << "," << "Unknown" << "\n";
+			outputFile << "Patient Details" << "," << "PatientID" << "," << "Unknown" << "\n";
+			outputFile << "Patient Details" << "," << "Scan start" << "," << "Unknown" << "\n";
+			outputFile << "Patient Details" << "," << "Scan Date" << "," << "Unknown" << "\n";
+			outputFile.close();
+		}
 
 	}
 	
@@ -681,27 +724,25 @@ inline void ConfigFile::getPETimageInformation(string imagePath, string patientI
 		useSUV = patientInfo.get("PatientInfo.UseSUV", 1);
 		useSUL = patientInfo.get("PatientInfo.UseSUL", 0);
 		correctionParam = patientInfo.get<float>("PatientInfo.ScalingFactor");
+		if (correctionParam > 0) {
+			useSUV = 1;
+		}
 		units_rescaling_factor = patientInfo.get<float>("PatientInfo.units_rescaling_factor");
-		if (correctionParam == float(0)) {
-			patientWeight = patientInfo.get<float>("PatientInfo.PatientWeight");
-			patientHeight = patientInfo.get<float>("PatientInfo.PatientHeight");
+		patientWeight = patientInfo.get<float>("PatientInfo.PatientWeight");
+		patientHeight = patientInfo.get<float>("PatientInfo.PatientHeight");
 
-			initActivity = patientInfo.get<float>("PatientInfo.ActivityMBq");
+		initActivity = patientInfo.get<float>("PatientInfo.ActivityMBq");
 			
-			gender = patientInfo.get<std::string>("PatientInfo.Gender");
+		gender = patientInfo.get<std::string>("PatientInfo.Gender");
 			
-			if (gender.compare("M") == 0) {
-				malePatient = 1;
-			}
-			else if (gender.compare("F") == 0) {
-				malePatient = 0;
-			}
-			else {
-				std::cout << "The gender could not be identified. The calculation of SUL is not possible" << std::endl;
-			}
+		if (gender.compare("M") == 0) {
+			malePatient = 1;
+		}
+		else if (gender.compare("F") == 0) {
+			malePatient = 0;
 		}
 		else {
-			useSUV = 1;
+			std::cout << "The gender could not be identified. The calculation of SUL is not possible" << std::endl;
 		}
 	}
 

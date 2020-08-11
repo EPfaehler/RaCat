@@ -3,13 +3,17 @@
 
 /*! \file */
 
-
+#include "itkImageDuplicator.h"
 #include <cmath>
+#include "itkAntiAliasBinaryImageFilter.h"
+#include "itkBinaryErodeImageFilter.h"
+#include "itkFlatStructuringElement.h"
 #include <boost/geometry.hpp>
 #include "matrixFunctions.h"
 #include "itkBinaryDilateImageFilter.h"
 #include <algorithm>
 #include <vector>
+#include <exception>
 #include "itkTetrahedronCell.h"
 #ifdef _WIN32
 #else
@@ -32,7 +36,7 @@
 
 #include "image.h"
 #include "itkTypes.h"
-
+#include "readImages.h"
 #include "itkChangeInformationImageFilter.h"
 
 
@@ -46,7 +50,7 @@ private:
 	ImageType::Pointer image;
 	ImageType::Pointer mask;
 	typedef itk::DefaultStaticMeshTraits<float, 3, 3, float, float, float> MeshTrait;
-
+	int actNrPixels = 0;
 	//in order to calculate the surface we have to convert our mask in a mesh
 	typedef itk::Mesh<float, 3, MeshTrait> MeshType;
 	typedef itk::BinaryMask3DMeshSource<ImageType, MeshType> MeshSourceType;
@@ -71,41 +75,41 @@ private:
 	typedef boost::accumulators::features <tag::mean> Features;
 	typedef accumulator_set <T, Features> Accumulator;
 	//the attributes of the class are the radiomics features
-	float volume;
-	float appVolume;
-	float surface;
-	float surface2volumeRatio;
-	float compactness1;
-	float compactness2;
-	float sphericalDisproportion;
-	float sphericity;
-	float asphericity;
-	float majorAxisLength;
-	float minorAxisLength;
-	float leastAxisLength;
-	float maximumDiameter;
-	float flatness;
-	float elongation;
-	T integratredInt;
-	T centerOfMassShift;
-	T meanValue;
-	T absMean;
-	float moransI;
-	float gearysC;
+	float volume = NAN;
+	float appVolume = NAN;
+	float surface = NAN;
+	float surface2volumeRatio = NAN;
+	float compactness1 = NAN;
+	float compactness2 = NAN;
+	float sphericalDisproportion = NAN;
+	float sphericity = NAN;
+	float asphericity = NAN;
+	float majorAxisLength = NAN;
+	float minorAxisLength = NAN;
+	float leastAxisLength = NAN;
+	float maximumDiameter = NAN;
+	float flatness = NAN;
+	float elongation = NAN;
+	T integratredInt = NAN;
+	T centerOfMassShift = NAN;
+	T meanValue = NAN;
+	T absMean = NAN;
+	float moransI = NAN;
+	float gearysC = NAN;
 
-	int nrPixels;
+	int nrPixels = NAN;
 
-	float volDensityAEE;
-	float areaDensityAEE;
+	float volDensityAEE = NAN;
+	float areaDensityAEE = NAN;
 
-	float volDensityOMBB;
-	float areaDensityOMBB;
+	float volDensityOMBB = NAN;
+	float areaDensityOMBB = NAN;
 
-	float volDensityAABB;
-	float areaDensityAABB;
+	float volDensityAABB = NAN;
+	float areaDensityAABB = NAN;
 
-	float volDensityMEE;
-	float areaDensityMEE;
+	float volDensityMEE = NAN;
+	float areaDensityMEE = NAN;
 
 	vector<vector<float> > vec;
 	vector<float> coordinates;
@@ -163,6 +167,7 @@ private:
 	void defineMorphologicalFeatures(vector<string> &features);
 	void extractMorphologicalData(vector<T> &morphData, MorphologicalFeatures<T, R> morphFeatures);
 	float getSurface(ImageType::Pointer mask);
+	ImageType::Pointer labelMaskImage(ImageType::Pointer mask, ImageType::Pointer labeledMask, int labelNr);
 public:
 	//constructor
 	MorphologicalFeatures() {
@@ -284,19 +289,16 @@ void MorphologicalFeatures<T, R>::getLabelObjectFeatures(ImageType::Pointer mask
 	LabelMapType *labelMap = labelImageToShapeLabelMapFilter->GetOutput();
 	//For every connected component a labelObject is created
 	//Because we are only interested in the object with the label one, we check the label number
-	volume = 0;
-	surface = 0;
+
 	nrPixels = 0;
 	maximumDiameter = 0;
 	for (unsigned int n = 0; n < labelMap->GetNumberOfLabelObjects(); n++) {
 		ShapeLabelObjectType *labelObject = labelMap->GetNthLabelObject(n);
 		int labelNr = labelObject->GetLabel();
-		if (labelNr >0) {
+		//if (labelNr >0) {
 #ifdef _WIN32
-			surface += labelObject->GetPerimeter();
-			volume += (0.998*labelObject->GetPhysicalSize()+ 0.999*labelObject->GetPhysicalSize()+0.9998*labelObject->GetPhysicalSize())/3;
 			maximumDiameter += labelObject->GetFeretDiameter();
-			if (labelNr == 1) {
+			if (labelNr == 0) {
 				principalMoments = labelObject->GetPrincipalMoments();
 			}
 			else {
@@ -313,7 +315,6 @@ void MorphologicalFeatures<T, R>::getLabelObjectFeatures(ImageType::Pointer mask
 			nrPixels += labelObject->GetNumberOfPixels();
 #endif
 
-		}
 	}
 }
 
@@ -417,16 +418,29 @@ void MorphologicalFeatures<T, R>::calculateSphericalDisproportion() {
 template <class T, size_t R>
 void MorphologicalFeatures<T, R>::calculateSphericity() {
 	sphericity = pow(compactness2, 0.333333);
+	if (sphericity > 1) {
+		sphericity = 1;
+	}
+	if (sphericity < 0) {
+		sphericity = 0;
+	}
 }
 
 template <class T, size_t R>
 void MorphologicalFeatures<T, R>::calculateAsphericity() {
 	asphericity = pow(1 / (36 * pi)*(pow(surface, 3) / pow(appVolume, 2)), 0.33333) - 1;
+	if (asphericity > 1) {
+		asphericity = 1;
+	}
+	if (asphericity < 0) {
+		asphericity = 0;
+	}
 }
 
 template <class T, size_t R>
 void MorphologicalFeatures<T, R>::calculateMajorAxisLength() {
 	majorAxisLength = 4 * sqrt(principalMoments[2]);
+	
 }
 
 template <class T, size_t R>
@@ -681,7 +695,6 @@ ImageType::Pointer MorphologicalFeatures<T, R>::thresholdMask(ImageType::Pointer
 		if (countVoxels.Get() > maxValue)
 		{
 			maxValue = countVoxels.Get();
-			//std::cout << maxValue << std::endl;
 		}
 		++countVoxels;
 	}
@@ -700,120 +713,162 @@ ImageType::Pointer MorphologicalFeatures<T, R>::thresholdMask(ImageType::Pointer
 
 }
 
+template<class T, size_t R>
+ImageType::Pointer MorphologicalFeatures<T, R>::labelMaskImage(ImageType::Pointer mask, ImageType::Pointer labeledMask, int labelNr) {
+	itk::ImageRegionIterator<ImageType> maskIt(mask, mask->GetLargestPossibleRegion());
+	itk::ImageRegionIterator<ImageType> labeledmaskIt(labeledMask, labeledMask->GetLargestPossibleRegion());
+
+	maskIt.GoToBegin();
+	labeledmaskIt.GoToBegin();
+	while (!maskIt.IsAtEnd())
+	{
+		if (labeledmaskIt.Get() == labelNr)
+		{
+			maskIt.Set(1);
+			actNrPixels++;
+		}
+		else {
+			maskIt.Set(0);
+		}
+
+		++maskIt;
+		++labeledmaskIt;
+	}
+	RegionType boundingBoxRegion = getBoundingBoxMask(mask);
+	itk::Size<3> regionSize = boundingBoxRegion.GetSize();
+	//shrink image and mask to the mask region
+	ImageType::Pointer testMask = getImageMasked(mask, boundingBoxRegion);
+	return testMask;
+}
 
 template<class T, size_t R>
 float MorphologicalFeatures<T, R>::getSurface(ImageType::Pointer mask) {
 	const typename ImageType::SpacingType& inputSpacing = mask->GetSpacing();
-	if (inputSpacing[0] > 3) {
-		float factor = (2 / inputSpacing[0]);
 
-		mask = subsampleImage(mask, factor);
-	}
-	using binaryFilterType = itk::BinaryFillholeImageFilter<ImageType>;
-	binaryFilterType::Pointer filter = binaryFilterType::New();
-	filter->SetInput(mask);
-	filter->Update();
-	//to calculate the surface we have to convert our mask to a mesh
+	typename CastFilterType::Pointer castFilter = CastFilterType::New();
+	castFilter->SetInput(mask);
+	volume = 0;
+	float totalSurface = 0;
+	
+	typename ConnectedComponentFilterType::Pointer connectedComponentImageFilter = ConnectedComponentFilterType::New();
+	connectedComponentImageFilter->SetFullyConnected(true);
+	connectedComponentImageFilter->SetInput(castFilter->GetOutput());
+	connectedComponentImageFilter->Update();
+
+	//With the label image to shape label map filter the mask is converted to a labeled image
+	typename LabelImageToShapeLabelMapFilterType::Pointer labelImageToShapeLabelMapFilter = LabelImageToShapeLabelMapFilterType::New();
+	labelImageToShapeLabelMapFilter->SetInput(connectedComponentImageFilter->GetOutput());
+	labelImageToShapeLabelMapFilter->Update();
+	LabelMapType *labelMap = labelImageToShapeLabelMapFilter->GetOutput();
+
+	using LabelMapToLabelImageFilterType = itk::LabelMapToLabelImageFilter<LabelMapType, ImageType>;
+	LabelMapToLabelImageFilterType::Pointer labelImageConverter = LabelMapToLabelImageFilterType::New();
+	labelImageConverter->SetInput(labelMap);
+	labelImageConverter->Update();
+	ImageType::Pointer labeledMask = labelImageConverter->GetOutput();
+	using DuplicatorType = itk::ImageDuplicator<ImageType>;
+	DuplicatorType::Pointer duplicator = DuplicatorType::New();
+	duplicator->SetInputImage(mask);
+	duplicator->Update();
+
+	ImageType::Pointer tmpMask = duplicator->GetOutput();
 	typename MeshSourceType::Pointer meshSource = MeshSourceType::New();
-	const PixelType objectValue = static_cast<PixelType>(1);
-	meshSource->SetObjectValue(objectValue);
-	meshSource->SetInput(mask);
+	//For every connected component a labelObject is created
+	for (unsigned int n = 0; n < labelMap->GetNumberOfLabelObjects(); n++) {
+		ShapeLabelObjectType *labelObject = labelMap->GetNthLabelObject(n);
+		actNrPixels = 0;
+		
+		ImageType::Pointer testMask = labelMaskImage(tmpMask, labeledMask, n);
+		if (actNrPixels > 20) {
+			const PixelType objectValue = static_cast<PixelType>(1);
+			meshSource->SetObjectValue(objectValue);
+			meshSource->SetInput(testMask);
 
-	try {
-		meshSource->Update();
-	}
-	catch (itk::ExceptionObject &exp) {
-		std::cerr << "Exception throwing during update()" << std::endl;
-	}
-	//using MeshType = itk::Mesh<double, 3>;
-	
-	//ensure that all cells are triangles (I do not think that is really necessary, maybe
-	//it can be deleted in another version
-	for (MeshType::CellsContainerIterator it = meshSource->GetOutput()->GetCells()->Begin();
-		it != meshSource->GetOutput()->GetCells()->End(); ++it) {
-		MeshType::CellAutoPointer cell;
-		meshSource->GetOutput()->GetCell(it->Index(), cell);
-		if (3 != cell->GetNumberOfPoints()) {
-			std::cerr << "ERROR: All cells must be trianglar." << std::endl;
-		}
-	}
-	
-	//to calculate the surface, we have to iterate over all cells of our mesh
-	Celliterator cellIterator = meshSource->GetOutput()->GetCells()->Begin();
-	Celliterator cellEnd = meshSource->GetOutput()->GetCells()->End();
 
-	typedef itk::SimplexMesh< float, 3 > TSimplex;
-	typedef itk::TriangleMeshToSimplexMeshFilter< MeshType, TSimplex > TConvert;
-	// Convert the triangle mesh to a simplex mesh.
-	TConvert::Pointer convert = TConvert::New();
-	//convert->SetInput(meshSource->GetOutput());
-	//convert->Update();
-	//TSimplex::Pointer testMesh = convert->GetOutput();
-	//typedef itk::SimplexMeshVolumeCalculator<TSimplex> VolumeCalculatorType;
+			try {
+				meshSource->Update();
 
-	//VolumeCalculatorType::Pointer volumeCalculator = VolumeCalculatorType::New();
-	//volumeCalculator->SetSimplexMesh(convert->GetOutput());
-	//volumeCalculator->Compute();
-	
-//	std::cout << "volume" << volumeCalculator->GetVolume() << std::endl;
-	//convert->Update();
-	//to really get the coordinates of the points of the cell, we need a polyDataReader
-	//iterate over all cells and store the indices of the points in a vector
-	//this vector is used later to calculate the surface of each cell
+			}
+			catch (itk::ExceptionObject &exp) {
+				std::cerr << "Exception throwing during update()" << std::endl;
+			}
+
+			//ensure that all cells are triangles (I do not think that is really necessary, maybe
+			//it can be deleted in another version
+			for (MeshType::CellsContainerIterator it = meshSource->GetOutput()->GetCells()->Begin();
+				it != meshSource->GetOutput()->GetCells()->End(); ++it) {
+				MeshType::CellAutoPointer cell;
+				meshSource->GetOutput()->GetCell(it->Index(), cell);
+				if (3 != cell->GetNumberOfPoints()) {
+					std::cerr << "ERROR: All cells must be trianglar." << std::endl;
+				}
+			}
+			//to calculate the surface, we have to iterate over all cells of our mesh
+			Celliterator cellIterator = meshSource->GetOutput()->GetCells()->Begin();
+			Celliterator cellEnd = meshSource->GetOutput()->GetCells()->End();
+
+			//to really get the coordinates of the points of the cell, we need a polyDataReader
+			//iterate over all cells and store the indices of the points in a vector
+			//this vector is used later to calculate the surface of each cell
 #ifdef _WIN32
-	MeshType::PointType pointOnMesh;
-	bool pointExists;
-	float testtest = 0;
-	while (cellIterator != cellEnd) {
-		CellType *cell = cellIterator.Value();
-		typedef CellType::PointIdIterator PointIdIterator;
-		PointIdIterator pointIdIter = cell->PointIdsBegin();
-		PointIdIterator pointIdend = cell->PointIdsEnd();
-		//testtest = cell->IsExplicitBoundary();
-		while (pointIdIter != pointIdend) {
-			
-			pointExists = meshSource->GetOutput()->GetPoint(*pointIdIter, &pointOnMesh);
-			if (pointExists) {
 
-				coordinates.push_back(pointOnMesh[0]);
-				coordinates.push_back(pointOnMesh[1]);
-				coordinates.push_back(pointOnMesh[2]);
-				vec.push_back(coordinates);
-				coordinates.clear();
+			MeshType::PointType pointOnMesh;
+			bool pointExists;
+			float testtest = 0;
+			while (cellIterator != cellEnd) {
+				CellType *cell = cellIterator.Value();
+				typedef CellType::PointIdIterator PointIdIterator;
+				PointIdIterator pointIdIter = cell->PointIdsBegin();
+				PointIdIterator pointIdend = cell->PointIdsEnd();
+				//testtest = cell->IsExplicitBoundary();
+				while (pointIdIter != pointIdend) {
+
+					pointExists = meshSource->GetOutput()->GetPoint(*pointIdIter, &pointOnMesh);
+					if (pointExists) {
+
+						coordinates.push_back(pointOnMesh[0] - mask->GetOrigin()[0]);
+						coordinates.push_back(pointOnMesh[1] - mask->GetOrigin()[1]);
+						coordinates.push_back(pointOnMesh[2] - mask->GetOrigin()[2]);
+						vec.push_back(coordinates);
+						coordinates.clear();
+					}
+					++pointIdIter;
+				}
+				++cellIterator;
 			}
-			++pointIdIter;
+			totalSurface += calculateSurface(vec);
+			vec.clear();
 		}
-		++cellIterator;
-	}
-	surface = calculateSurface(vec);
-
 #else
-	ReaderTypeVTK::Pointer polyDataReader = ReaderTypeVTK::New();
-	PointType pointOnMesh;
-	bool pointExists;
+		ReaderTypeVTK::Pointer polyDataReader = ReaderTypeVTK::New();
+		PointType pointOnMesh;
+		bool pointExists;
 
-	//now iterate over all cells and store the coordinates of each cell in a vector
-	while (cellIterator != cellEnd) {
-		CellType *cell = cellIterator.Value();
-		typedef CellType::PointIdIterator PointIdIterator;
-		PointIdIterator pointIdIter = cell->PointIdsBegin();
-		PointIdIterator pointIdend = cell->PointIdsEnd();
-		while (pointIdIter != pointIdend) {
-			pointExists = meshSource->GetOutput()->GetPoint(*pointIdIter, &pointOnMesh);
-			if (pointExists) {
-				coordinates.push_back(pointOnMesh[0]);
-				coordinates.push_back(pointOnMesh[1]);
-				coordinates.push_back(pointOnMesh[2]);
-				vec.push_back(coordinates);
-				coordinates.clear();
+		//now iterate over all cells and store the coordinates of each cell in a vector
+		while (cellIterator != cellEnd) {
+			CellType *cell = cellIterator.Value();
+			typedef CellType::PointIdIterator PointIdIterator;
+			PointIdIterator pointIdIter = cell->PointIdsBegin();
+			PointIdIterator pointIdend = cell->PointIdsEnd();
+			while (pointIdIter != pointIdend) {
+				pointExists = meshSource->GetOutput()->GetPoint(*pointIdIter, &pointOnMesh);
+				if (pointExists) {
+					coordinates.push_back(pointOnMesh[0]);
+					coordinates.push_back(pointOnMesh[1]);
+					coordinates.push_back(pointOnMesh[2]);
+					vec.push_back(coordinates);
+					coordinates.clear();
+				}
+				++pointIdIter;
 			}
-			++pointIdIter;
+			++cellIterator;
 		}
-		++cellIterator;
+		surface = calculateSurface(vec);
+
 	}
-	surface = calculateSurface(vec);
 #endif
-	return surface;
+	}
+	return totalSurface;
 }
 
 //calculate the surface of a mesh
@@ -849,17 +904,14 @@ float MorphologicalFeatures<T, R>::calculateSurface(vector<vector<float> > vec) 
 		p1[0] = tmpPoint[0] -centerPoint[0];
 		p1[1] = tmpPoint[1] -centerPoint[1];
 		p1[2] = tmpPoint[2] -centerPoint[2];
-		//std::cout << "P1" <<" "<< p1[0] << " " << p1[1] << " " << p1[2] << " ";
 		tmpPoint = vec[3 * nr + 1];
 		p2[0] = tmpPoint[0] -centerPoint[0];
 		p2[1] = tmpPoint[1] -centerPoint[1];
 		p2[2] = tmpPoint[2] -centerPoint[2];
-		//std::cout << "P2" <<" "<< p2[0] << " " << p2[1] << " " << p2[2] << " ";
 		tmpPoint = vec[3 * nr + 2];
 		p3[0] = tmpPoint[0] -centerPoint[0];
 		p3[1] = tmpPoint[1] -centerPoint[1];
 		p3[2] = tmpPoint[2] -centerPoint[2];
-		//std::cout << "P3" <<" "<< p3[0] << " " << p3[1] << " " << p3[2] << std::endl;
 		//cross[0] =p1[0]* (p2[1] * p3[2] - p3[2] * p2[1]);
 		//cross[1] = p1[1] * (p3[2] * p2[0] - p3[0] * p2[1]);
 		//cross[2] = p1[2] * (p2[0] * p3[1] - p3[0] * p2[1]);
@@ -956,7 +1008,7 @@ float MorphologicalFeatures<T, R>::calculateSurface(vector<vector<float> > vec) 
 		+ m_Ky * m_VolumeY
 		+ m_Kz * m_VolumeZ);
 	m_Volume = std::fabs(m_Volume);
-	volume = m_Volume;
+	volume += m_Volume;
 	return surface;
 }
 
@@ -964,14 +1016,12 @@ float MorphologicalFeatures<T, R>::calculateSurface(vector<vector<float> > vec) 
 template <class T, size_t R>
 void MorphologicalFeatures<T, R>::calculateAllMorphologicalFeatures(MorphologicalFeatures<T, R> &morphFeatures, Image<float, 3> imageAttr, ConfigFile config) {
 	const typename ImageType::SpacingType& inputSpacing = imageAttr.image->GetSpacing();
-	mask = imageAttr.mask;
-	
-	mask = changeMaskSpacingToImageSpacing(imageAttr.image, mask);
-	ImageType::SpacingType   spacingMask = mask->GetSpacing();
+
+	//mask = changeMaskSpacingToImageSpacing(imageAttr.image, mask);
+	ImageType::SpacingType   spacingMask = imageAttr.mask->GetSpacing();
 	imageSpacingX = inputSpacing[0];
 	imageSpacingY = inputSpacing[1];
 	imageSpacingZ = inputSpacing[2];
-	ImageType::Pointer updatedMask = thresholdMask(mask, config);
 	//morphFeatures.getSurface(imageAttr.mask);
 	if (config.useReSegmentation == 1) {
 		morphFeatures.calculateApproximateVolume(imageAttr.imageMatrixOriginal, imageAttr.vectorOfMatrixElements);
@@ -979,17 +1029,20 @@ void MorphologicalFeatures<T, R>::calculateAllMorphologicalFeatures(Morphologica
 	else {
 		morphFeatures.calculateApproximateVolume(imageAttr.imageMatrix, imageAttr.vectorOfMatrixElements);
 	}
-	itk::ImageRegionConstIterator<ImageType> countVoxels(mask, mask->GetLargestPossibleRegion());
-
+	itk::ImageRegionConstIterator<ImageType> countVoxels(imageAttr.mask, imageAttr.mask->GetLargestPossibleRegion());
+	mask = imageAttr.mask;
 	
-	morphFeatures.getLabelObjectFeatures(updatedMask);
-	surface = getSurface(updatedMask);
-	morphFeatures.getBoundingBoxValues(updatedMask);
+	surface = getSurface(imageAttr.mask);
+	morphFeatures.getLabelObjectFeatures(imageAttr.mask);
+	morphFeatures.getBoundingBoxValues(imageAttr.mask);
 	morphFeatures.calculateMajorAxisLength();
+
 	morphFeatures.calculateMinorAxisLength();
 	morphFeatures.calculateLeastAxisLength();
+
 	morphFeatures.calculateSurface2Volume();
 	morphFeatures.calculateCompactness1();
+
 	morphFeatures.calculateCompactness2();
 	morphFeatures.calculateSphericalDisproportion();
 	morphFeatures.calculateSphericity();
@@ -1022,6 +1075,9 @@ void MorphologicalFeatures<T, R>::calculateAllMorphologicalFeatures(Morphologica
 			subsampledImage.calculateSUL(imageMatrix, config);
 		}
 		morphFeatures.calculateMoransI(imageMatrix);
+		subImage = nullptr;
+		subMask = nullptr;
+		
 	}
 	else {
 		morphFeatures.calculateMoransI(imageAttr.imageMatrix);
@@ -1041,12 +1097,9 @@ void MorphologicalFeatures<T, R>::writeCSVFileMorphological(MorphologicalFeature
 	name[csvName.size()] = '\0';
 
 	ofstream morphCSV;
-	if (config.imageType != "PET") {
-		morphCSV.open(name);
-	}
-	else {
-		morphCSV.open(name, std::ios_base::app);
-	}
+	
+	morphCSV.open(name, std::ios_base::app);
+	
 	
 	vector<string> features;
 	defineMorphologicalFeatures(features);
@@ -1076,12 +1129,8 @@ void MorphologicalFeatures<T, R>::writeOneFileMorphological(MorphologicalFeature
 	std::copy(csvName.begin(), csvName.end(), name);
 	name[csvName.size()] = '\0';
 	ofstream morphCSV;
-	if (config.imageType != "PET") {
-		morphCSV.open(name);
-	}
-	else {
-		morphCSV.open(name, std::ios_base::app);
-	}
+	morphCSV.open(name, std::ios_base::app);
+	
 	vector<string> features;
 	vector<T> morphData;
 	extractMorphologicalData(morphData, morph);

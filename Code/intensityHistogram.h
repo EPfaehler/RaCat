@@ -32,15 +32,15 @@ class IntensityHistogram : StatisticalFeatures<T,R>{
 		void getProbabilities(boost::multi_array<T, R> inputMatrix);
 		void getSkewnessKurtosisIntHist();
 		//feature values
-        T entropy;
-        T mode;
-        T histUniformity;
-        T maxHistGradient;
-        T maxHistGradGreyValue;
-        T minHistGradient;
-        T minHistGradGreyValue;
-		T kurtosisInt;
-		T skewnessInt;
+        T entropy = NAN;
+        T mode = NAN;
+        T histUniformity = NAN;
+        T maxHistGradient = NAN;
+        T maxHistGradGreyValue = NAN;
+        T minHistGradient = NAN;
+        T minHistGradGreyValue = NAN;
+		T kurtosisInt = NAN;
+		T skewnessInt = NAN;
         vector<T> vectorOfMatrixElem;
         vector<double> nrElementsH;
         vector<T> diffGreyLevels;
@@ -94,9 +94,8 @@ The method getMode calculates the mode of the distribution. \n
 template <class T,  size_t R>
 void IntensityHistogram<T,R>::getMode(){
 	for (int i = 0; i < boost::size(probElements); i++) {
-		std::cout << probElements[i] << " ";
 	}
-    int indexMaxProb = distance(probElements.begin(), max_element(probElements.begin(), probElements.end()));
+    int indexMaxProb = std::distance(probElements.begin(), max_element(probElements.begin(), probElements.end()));
 	sort(vectorOfMatrixElem.begin(), vectorOfMatrixElem.end());
     mode = vectorOfMatrixElem[indexMaxProb];
 }
@@ -266,6 +265,8 @@ void IntensityHistogram<T,R>::calculateAllIntFeatures(IntensityHistogram<T,R> &i
   intense.getHistUniformity();
   intense.getMaxHistGradient();
   intense.getMinHistGradient();
+  vector<float>().swap(vectorOfMatrixElem);
+  
 }
 
 template <class T,  size_t R>

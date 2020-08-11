@@ -168,7 +168,7 @@ Example files for config, feature selection, and patient information are stored 
 		if (config.csvOutput == 1) {
 			config.createOutputFile(config);
 		}
-		prepareDataForFeatureCalculation(config);
+		readImageAndMask(config);
 		config.copyConfigFile(config.outputFolder);
 		
 		config.useFixedBinWidth = 1;
@@ -177,7 +177,7 @@ Example files for config, feature selection, and patient information are stored 
 		if (config.csvOutput == 1) {
 			config.createOutputFile(config);
 		}
-		prepareDataForFeatureCalculation(config);
+		readImageAndMask(config);
 		config.copyConfigFile(config.outputFolder);
 		
 	}
@@ -185,7 +185,7 @@ Example files for config, feature selection, and patient information are stored 
 		if (config.csvOutput == 1) {
 			config.createOutputFile(config);
 		}
-		prepareDataForFeatureCalculation(config);
+		readImageAndMask(config);
 		config.copyConfigFile(config.outputFolder);
 	}
 	return 0;

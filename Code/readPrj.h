@@ -5,12 +5,13 @@
 #include "featureCalculation.h"
 #include "itkTypes.h"
 
-ImageType::Pointer reorderFile(ImageType::Pointer imageVoiFile, unsigned int* imageSize, float *voxelSize);
 //functions to read accurate files
 ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float *voxelSize);
 //read the file into array and stores it as ITK image
 ImageType::Pointer readPrjFilePET(string prjPath, string imageType, float smoothingKernel, unsigned int(&dim)[3], float (&voxelSize)[3]);
 //get image dimensions etc from the prj file
+ImageType::Pointer readVoiFilePET(string prjPath, string voiPath, ImageType *image, ConfigFile config, unsigned int(&dim)[3], float voxelSize[3]);
+
 void getImageDimension(ifstream &inFile, unsigned int(&dim)[3]);
 void getVoxelSize(ifstream &inFile, float(&voxelSize)[3]);
 void getImageValues(ifstream &inFile, vector<float> &imageArray);

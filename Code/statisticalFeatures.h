@@ -71,26 +71,26 @@ class StatisticalFeatures{
 		~StatisticalFeatures() {
 		}
 
-        T meanValue;
-        T varianceValue;
-        T skewnessValue;
-        T kurtosisValue;
-        T medianValue;
-        T minimumValue;
-        T maximumValue;
-        T rangeValue;
-        T percentile10;
-        T percentile90;
-        T percentile25;
-        T percentile75;
-        T interquartileRange;
-        T quartileCoeff;
-        T coeffOfVar;
-        T energyValue;
-        T rootMean;
-        T meanAbsDev;
-        T medianAbsDev;
-        T robustMeanAbsDev;
+        T meanValue = NAN;
+        T varianceValue = NAN;
+        T skewnessValue = NAN;
+        T kurtosisValue = NAN;
+        T medianValue = NAN;
+        T minimumValue = NAN;
+        T maximumValue = NAN;
+        T rangeValue = NAN;
+        T percentile10 = NAN;
+        T percentile90 = NAN;
+        T percentile25 = NAN;
+        T percentile75 = NAN;
+        T interquartileRange = NAN;
+        T quartileCoeff = NAN;
+        T coeffOfVar = NAN;
+        T energyValue = NAN;
+        T rootMean = NAN;
+        T meanAbsDev = NAN;
+        T medianAbsDev = NAN;
+        T robustMeanAbsDev = NAN;
 
 
         void calculateMean(vector<T> vectorMatrElem);

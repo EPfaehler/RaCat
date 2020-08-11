@@ -27,13 +27,13 @@ class IntensityVolumeFeatures{
         vector<T> fracVolume; 
 		vector<T> intensityVector;
 
-        T volAtIntFrac10;
-        T volAtIntFrac90;
-        T intAtVolFrac10;
-        T intAtVolFrac90;
+        T volAtIntFrac10 = NAN;
+        T volAtIntFrac90 = NAN;
+        T intAtVolFrac10 = NAN;
+        T intAtVolFrac90 = NAN;
 
-        T diffVolAtIntFrac;
-        T diffIntAtVolFrac;
+        T diffVolAtIntFrac = NAN;
+        T diffIntAtVolFrac = NAN;
 
         T getVolumeAtIntFraction(double percent);
         T getIntAtVolFraction(double percent, vector<T> diffGreyLevels);
@@ -118,7 +118,7 @@ T IntensityVolumeFeatures<T, R>::getVolumeAtIntFraction(double percent) {
 	greaterThan = remove_if(tempVector.begin(), tempVector.end(), bind2nd(less<T>(), percent));
 	tempVector.erase(greaterThan, tempVector.end());
 	it = find(greyLevelFraction.begin(), greyLevelFraction.end(), tempVector[0]);
-	int pos = distance(greyLevelFraction.begin(), it);
+	int pos = std::distance(greyLevelFraction.begin(), it);
 	return fracVolume[pos];
 }
 
@@ -138,7 +138,7 @@ T IntensityVolumeFeatures<T, R>::getIntAtVolFraction(double percent, vector<T> d
 		greaterThan = remove_if(tempVector.begin(), tempVector.end(), bind2nd(greater<T>(), percent));
 		tempVector.erase(greaterThan, tempVector.end());
 		it = find(fracVolume.begin(), fracVolume.end(), tempVector[0]);
-		pos = distance(fracVolume.begin(), it);
+		pos = std::distance(fracVolume.begin(), it);
 
 	}
 	else {
@@ -164,7 +164,6 @@ void IntensityVolumeFeatures<T, R>::calculateAllIntensVolFeatures(IntensityVolum
 	}
 	maxGreyLevel = *max_element(elementVector.begin(), elementVector.end());
 	minGreyLevel = *min_element(elementVector.begin(), elementVector.end());
-	std::cout << "minMax" << minGreyLevel << " " << maxGreyLevel << std::endl;
 	vector<T> temGreyLevels;
 	//get Grey Levels which are not NAN
 	std::copy(elementVector.begin(), elementVector.end(), back_inserter(temGreyLevels));

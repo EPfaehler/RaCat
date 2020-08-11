@@ -55,6 +55,7 @@ namespace itkTypes {
 	typedef itk::Image< float, 2 > ImageType2D;
 	typedef itk::ImageFileReader< ImageType > ReaderType;
 	typedef itk::ImportImageFilter<float, 3> ImportFilterType;
+	typedef itk::ImportImageFilter<int, 3> ImportFilterTypeInt;
 	typedef itk::ImportImageFilter<float, 2> ImportFilterType2D;
 	typedef itk::RegionOfInterestImageFilter< ImageType, ImageType > FilterType;
 	typedef itk::ImageMaskSpatialObject<3>      ImageMaskSpatialObject;

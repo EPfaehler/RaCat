@@ -6,7 +6,7 @@
 
 
 //void readInFeatureSelection(EFoobar::Flags &featureFlags, string featureSelectionPath);
-void CalculateRelFeatures(Image<float, 3> imageAttr, ImageType *image, ImageType *mask, ConfigFile config);
+void CalculateRelFeatures(Image<float, 3> imageAttr, ConfigFile config);
 void calculateRelFeaturesDiscretized(Image<float, 3> imageAttr, vector<double> spacing, ConfigFile config);
 void writeLogFile(string logFileName, std::string &text);
 #include "readInFeatureSelection.cpp"

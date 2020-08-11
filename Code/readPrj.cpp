@@ -1,48 +1,3 @@
-ImageType::Pointer reorderFile(ImageType::Pointer imageVoiFile) {
-	const typename ImageType::RegionType regionFilter = imageVoiFile->GetLargestPossibleRegion();
-	const typename ImageType::SizeType imageSizeFilter = regionFilter.GetSize();
-	unsigned int imageSize[3] = { imageSizeFilter[0], imageSizeFilter[1],imageSizeFilter[2] };
-	const typename ImageType::SpacingType& inputSpacing = imageVoiFile->GetSpacing();
-	float voxelSize[3] = { inputSpacing [0], inputSpacing [1], inputSpacing[2]};
-	boost::multi_array<float, 3> A(boost::extents[imageSize[0]][imageSize[1]][imageSize[2]]);
-	int row = 0;
-	int depth = 0;
-	int col = 0;
-	int actPosition = 0;
-	//std::cout << "max mask" << maxValueInMask << std::endl;
-	while (actPosition < imageSize[0] * imageSize[1] * imageSize[2]) {
-		if (row < imageSize[0] && depth < imageSize[2]) {
-
-			A[row][col][depth] = imageVoiFile->GetBufferPointer()[actPosition];
-				
-			row = row + 1;
-		}
-
-		if (row == imageSize[0] && col < imageSize[1]) {
-			col = col + 1;
-			row = 0;
-		}
-		if (col == imageSize[1] && depth < imageSize[2]) {
-			col = 0;
-			depth = depth + 1;
-		}
-		actPosition += 1;
-	}
-	vector<float> reorder;
-	for (int row = 0; row < imageSize[0]; row++) {
-		for (int col = 0; col < imageSize[1]; col++) {
-			for (int depth = 0; depth < imageSize[2]; depth++) {
-				reorder.push_back(A[imageSize[0] - row-1][col][imageSize[2] - depth-1]);
-			}
-		}
-	}
-	std::cout << "TESTEST" << boost::size(reorder) << std::endl;
-	float *voiArray = &reorder[0];
-
-	ImageType::Pointer reorderedImage = converArray2Image(voiArray, imageSize, voxelSize);
-	return reorderedImage;
-}
-
 //convert an array to an ITK image
 ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float *voxelSize) {
 	
@@ -54,7 +9,6 @@ ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float
 	size[0] = dim[0];
 	size[1] = dim[1];
 	size[2] = dim[2];
-
 
 	int nrVoxelsPET = dim[0] * dim[1] * dim[2];
 	//start with importing the image
@@ -72,32 +26,14 @@ ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float
 	float centerZ = float((voxelSize[2] * dim[2]) / 2.0);
 	const itk::SpacePrecisionType origin[3] = { centerX, centerY, -centerZ };
 	const itk::SpacePrecisionType spacing[3] = { voxelSize[0], voxelSize[1], voxelSize[2] };
-	//const itk::SpacePrecisionType direction[3] = { voxelSize[0], voxelSize[1], voxelSize[2] };
-	//direction matrix in compliance with standard nifti files from UMCG
-	/*using MatrixType = itk::Matrix<double, 3, 3>;
-	MatrixType matrix;
-	matrix[0][0] = 1;
-	matrix[0][1] = 0;
-	matrix[0][2] = 0.;
-
-	matrix[1][0] = 0;
-	matrix[1][1] = -1;
-	matrix[1][2] = 0.;
-
-	matrix[2][0] = 0;
-	matrix[2][1] = 0;
-	matrix[2][2] = 1;*/
-	
 	importFilter->SetOrigin(origin);
 	importFilter->SetSpacing(spacing);
-	//importFilter->SetDirection(matrix);
 	const bool importImageFilterWillOwnTheBuffer = true;
 	importFilter->SetImportPointer(imageArray, nrVoxelsPET, importImageFilterWillOwnTheBuffer);
 	importFilter->Update();
-
 	finalImage = importFilter->GetOutput();
 	finalImage->Register();
-	
+
 	using FlipImageFilterType = itk::FlipImageFilter<ImageType>;
 	FlipImageFilterType::Pointer flipFilter = FlipImageFilterType::New();
 	flipFilter->SetInput(finalImage);
@@ -107,10 +43,8 @@ ImageType::Pointer converArray2Image(float *imageArray, unsigned int* dim, float
 	flipAxes[2] = false;
 	flipFilter->SetFlipAxes(flipAxes);
 	flipFilter->Update();
-
 	return flipFilter->GetOutput();
 }
-
 
 
 
@@ -138,11 +72,15 @@ ImageType::Pointer readPrjFilePET(string prjPath, string imageType, float smooth
 		vector<float> petVector(nrVoxelsPET);
 		vector<float> ctVector(nrVoxelsPET);
 		getImageValues(prjfile, petVector);
+		
+		
 		//if image is PET image get array with PET values
 		if (imageType == "PET") {
 			float *arr = &petVector[0];
 			PETimage = converArray2Image(arr, dimPET, voxelSize);
 			PETimage->Update();
+			vector<float>().swap(petVector);
+			arr = nullptr;
 		}
 
 		//else get arrat with CT values
@@ -150,13 +88,11 @@ ImageType::Pointer readPrjFilePET(string prjPath, string imageType, float smooth
 			getImageValues(prjfile, ctVector);
 			float *arr = &ctVector[0];
 			PETimage = converArray2Image(arr, dimCT, voxelSizeCT);
-			std::cout << "image PET" << std::endl;
 			PETimage->Update();
 		}
 		else {
 			std::cout << "Unknown image type. Please check the image type in the config file" << std::endl;
 		}
-
 		itk::FixedArray<bool, 3> flipAxes;
 		flipAxes[0] = false;
 		flipAxes[1] = false;
@@ -210,4 +146,49 @@ void getVoxelSize(ifstream &inFile, float(&voxelSize)[3]) {
 		inFile.read((char*)&voxelSize[i], sizeof(float));
 	}
 
+}
+
+ImageType::Pointer readVoiFilePET(string prjPath, string voiPath, ImageType *image, ConfigFile config, unsigned int(&dimPET)[3], float voxelSize[3]) {
+	ImageType::Pointer maskImage;
+	//parameters to store the dimension of the PET and CT image
+	//the voxel size, halfLife of the tracer, the volume scale and the frame scale
+	int nrVoxelsPET = int(dimPET[0] * dimPET[1] * dimPET[2]);
+	//prjfile.close();
+	//open the voi file
+	ifstream voiFile;
+	voiFile.open(voiPath, ios::in | ios::binary);
+	if (voiFile.is_open() == false) {
+		std::cout << "Cannot open voi file\n";
+		exit(0);
+	}
+	else {
+		//read the voi file
+		streampos begin, end;
+		begin = voiFile.tellg();
+		voiFile.seekg(0, ios::end);
+		end = voiFile.tellg();
+		int fileSize = (end - begin);
+		//vector to store all the elements
+		vector<char> wholeFile(fileSize);
+
+		voiFile.seekg(0, std::ios::beg);
+		voiFile.read(&wholeFile[0], fileSize);
+		vector< float> mask(fileSize);
+
+		transform(wholeFile.begin(), wholeFile.end(), mask.begin(), [](auto& elem) {return ((float)(elem)); });
+
+		vector< float> voi(wholeFile.begin() + (fileSize / 2), wholeFile.end());
+
+		float *voiArray = &voi[0];
+		//convert the array to an ITK image
+		maskImage = converArray2Image(voiArray, dimPET, voxelSize);
+		maskImage->Update();
+		voiFile.close();
+		//clean memory
+		voiArray = nullptr;
+		vector<float>().swap(voi);
+		vector<float>().swap(mask);
+
+	}
+	return maskImage;
 }

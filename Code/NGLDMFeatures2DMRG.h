@@ -32,7 +32,7 @@ class NGLDMFeatures2DMRG : public GLRLMFeatures<T,R>{
 		
 
     public:
-        float dependenceCountEnergy;
+        float dependenceCountEnergy = NAN;
 		int findIndex(vector<T> array, int size, T target);
         void writeCSVFileNGLDM2DMRG(NGLDMFeatures2DMRG<T,R> ngldmFeat, string outputFolder);
 		void writeOneFileNGLDM2DMRG(NGLDMFeatures2DMRG<T, R> ngldmFeat, ConfigFile config, int &parameterSpaceNr);

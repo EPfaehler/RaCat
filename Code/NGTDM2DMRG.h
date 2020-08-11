@@ -33,11 +33,11 @@ private:
 
 public:
 	vector<T> diffGreyLevels;
-	double coarseness;
-	double contrast;
-	double busyness;
-	double complexity;
-	double strength;
+	double coarseness = NAN;
+	double contrast = NAN;
+	double busyness = NAN;
+	double complexity = NAN;
+	double strength = NAN;
 
 	void getProbability(vector<T> elementsOfWholeNeighborhood, boost::multi_array<float, 2> &ngtdMatrix);
 	double calculateSumSi(boost::multi_array<float, 2> ngtdm);

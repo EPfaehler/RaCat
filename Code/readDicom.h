@@ -1,7 +1,7 @@
 #ifndef _READDICOM_H_
 #define _READDICOM_H_
 #include "readImages.h"
-
+#include "itkSpatialObject.h"
 
 namespace gdcm { class Reader; }
 
