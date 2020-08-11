@@ -1,14 +1,4 @@
-There is a new RaCaT version only (version 1.18).
-The main changes to the previous version are:
 
-- fixing of some bugs (volume, NGTDM3D and GLDZM3D)
-
-- the configuration file looks different:
-   [Interpolation]: If you want to resample the image to cubic voxels before feature calculation, you can set now: 
-   UseSamplingToCubic= 1 and can then choose the desired voxel size in the line:
-   CubicVoxelSize  = 2 (here we set it to 2 mm)
-   [OutputInformation]: If you want to overwrite already existing .csv files, you can set OverwriteCSV = 1
-   
    
 
 A detailed documentation about how to use RaCaT and how to run it from source can be found in the documentation folder. However, here a short overview:
@@ -23,7 +13,7 @@ Download the files of this repository.
    CMake can be downloaded here: https://cmake.org/install/
 
 3. Get ITK
-    3.1 Windows
+     Windows
     Here we only describe the installation using Microsoft Visual Studio. For all other compilers, check: https://itk.org/Wiki/ITK/Getting_Started/Build/Windows
     - Launch CMake GUI 
     - Go to field "Where is the source code:", click "Browse Source..." and navigate to where you cloned the repository with Git.
@@ -42,7 +32,7 @@ Download the files of this repository.
     - Then you can run ITK: sudo make
     - Then you can install ITK: sudo make install
 
-4. Get boost
+4. Get boost version 1_70_0 (thats important as the newer version have some problems with ITK!)
    The Radiomics Toolbox needs also the boost library. Download the source code from here: http://www.boost.org/users/history/version_1_61_0.html and unpack the folder.
    We have to install some boost libraries:
    - Go to the folder, where you unpacked the boost libraries
